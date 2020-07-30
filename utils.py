@@ -5,6 +5,7 @@ import time
 
 import numpy as np
 import torch
+import torchfile
 import torch.nn as nn
 import torch.nn.init as init
 import torchvision.utils as vutils
@@ -13,10 +14,12 @@ from torchvision import transforms
 from torch.autograd import Variable
 from torch.optim import lr_scheduler
 from torch.utils.data import DataLoader
-from torch.utils.serialization import load_lua
+# deprecated
+#from torch.utils.serialization import load_lua
+
 
 from networks import Vgg16
-from data import ImageFilelist, ImageFolder
+from data import ImageFolder
 
 
 def get_all_data_loaders(conf):
@@ -76,7 +79,7 @@ def __write_images(image_outputs, display_image_num, file_name):
     image_grid = vutils.make_grid(image_tensor.data, nrow=display_image_num, padding=0, normalize=True)
     vutils.save_image(image_grid, file_name, nrow=1)
 
-def write_2images(images_outputs, display_image_num, images_directory, postfix):
+def write_2images(image_outputs, display_image_num, image_directory, postfix):
     n = len(image_outputs)
     __write_images(image_outputs[0:n//2], display_image_num, '%s/gen_a2b_%s.jpg' % (image_directory, postfix))
     __write_images(image_outputs[n//2:n], display_image_num, '%s/gen_b2a_%s.jpg' % (image_directory, postfix))
@@ -183,7 +186,7 @@ def load_vgg16(model_dir):
     if not os.path.exists(os.path.join(model_dir, 'vgg16.weight')):
         if not os.path.exists(os.path.join(model_dir, 'vgg16.t7')):
             os.system('wget https://www.dropbox.com/s/76l3rt4kyi3s8x7/vgg16.t7?dl=1 -O ' + os.path.join(model_dir, 'vgg16.t7'))
-        vgglua = load_lua(os.path.join(model_dir, 'vgg16.t7'))
+        vgglua = torchfile.load(os.path.join(model_dir, 'vgg16.t7'))
         vgg = Vgg16()
         for (src, dst) in zip(vgglua.parameters()[0], vgg.parameters()):
             dst.data[:] = src

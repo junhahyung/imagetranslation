@@ -4,7 +4,7 @@ import shutil
 import argparse
 
 import torch
-import tensorboardx
+import tensorboardX
 import torch.backends.cudnn as cudnn
 
 from torch.autograd import Variable
@@ -48,7 +48,7 @@ test_display_images_a = torch.stack([test_loader_a.dataset[i] for i in range(dis
 test_display_images_b = torch.stack([test_loader_b.dataset[i] for i in range(display_size)]).cuda()
 
 model_name = os.path.splitext(os.path.basename(opts.config))[0]
-train_writer = tensorboardx.SummaryWriter(os.path.join(opts.output_path + "/logs", model_name))
+train_writer = tensorboardX.SummaryWriter(os.path.join(opts.output_path + "/logs", model_name))
 output_directory = os.path.join(opts.output_path + "/outputs", model_name)
 checkpoint_directory, image_directory = prepare_sub_folder(output_directory)
 shutil.copy(opts.config, os.path.join(output_directory, 'config.yaml'))

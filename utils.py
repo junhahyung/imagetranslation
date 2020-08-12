@@ -19,7 +19,7 @@ from torch.utils.data import DataLoader
 
 
 from networks import Vgg16
-from data import ImageFolder
+from data import ImageFolder, ImageFilelist, ImageAndLandmarks
 
 
 def get_all_data_loaders(conf):
@@ -33,7 +33,7 @@ def get_all_data_loaders(conf):
     height = conf['crop_image_height']
     width = conf['crop_image_width']
 
-    if 'data_root' in conf:
+    if 'data_list_train_a' not in conf:
         train_loader_a = get_data_loader_folder(os.path.join(conf['data_root'], 'trainA'), batch_size, True, 
                                                 new_size_a, height, width, num_workers, True)
         test_loader_a = get_data_loader_folder(os.path.join(conf['data_root'], 'testA'), batch_size, False,
@@ -44,9 +44,54 @@ def get_all_data_loaders(conf):
                                                new_size_b, new_size_b, new_size_b, num_workers, True)
     
     else:
-        # implement this part if necessary
-        pass
+        train_loader_a = get_data_loader_list(conf['data_root'], conf['data_list_train_a'], batch_size, True, new_size_a, height, width, num_workers, True)
+        test_loader_a = get_data_loader_list(conf['data_root'], conf['data_list_test_a'], batch_size, True, new_size_a, height, width, num_workers, True)
+        train_loader_b = get_data_loader_list(conf['data_root'], conf['data_list_train_b'], batch_size, True, new_size_a, height, width, num_workers, True)
+        test_loader_b = get_data_loader_list(conf['data_root'], conf['data_list_test_b'], batch_size, True, new_size_a, height, width, num_workers, True)
+
     return train_loader_a, train_loader_b, test_loader_a, test_loader_b
+
+
+def get_all_landmark_loaders(conf):
+    batch_size = conf['batch_size']
+    num_workers = conf['num_workers'] # number of data loading threads
+    new_size = conf['new_size']
+    height = conf['crop_image_height']
+    width = conf['crop_image_width']
+    
+    train_loader = get_landmark_data_loader(conf['data_root'], conf['data_list_train'], conf['landmark_dir'], batch_size, True, new_size, height, width, conf['default_h'], conf['default_w'], num_workers, True)
+    test_loader = get_landmark_data_loader(conf['data_root'], conf['data_list_test'], conf['landmark_dir'], batch_size, False, new_size, height, width, conf['default_h'], conf['default_w'], num_workers, True)
+
+    return train_loader, test_loader
+
+
+def get_landmark_data_loader(root, file_list, landmark_dir, batch_size, train, new_size=None, 
+        height=256, width=256, default_h=218, default_w=178, num_workers=4, crop=True):
+    transform_list = [transforms.ToTensor(),
+                      transforms.Normalize((0.5, 0.5, 0.5),
+                                            (0.5, 0.5, 0.5))]
+    transform_list = [transforms.CenterCrop((height, width))] + transform_list if crop else transform_list
+    transform_list = [transforms.Resize(new_size)] + transform_list if new_size is not None else transform_list
+    #transform_list = [transforms.RandomHorizontalFlip()] + transform_list if train else transform_list
+    transform = transforms.Compose(transform_list)
+    dataset = ImageAndLandmarks(root, file_list, landmark_dir, height, width, default_h, default_w, transform=transform)
+    loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=train, drop_last=True, num_workers=num_workers)
+
+    return loader
+
+
+def get_data_loader_list(root, file_list, batch_size, train, new_size=None, 
+        height=256, width=256, num_workers=4, crop=True):
+    transform_list = [transforms.ToTensor(),
+                      transforms.Normalize((0.5, 0.5, 0.5),
+                                            (0.5, 0.5, 0.5))]
+    transform_list = [transforms.RandomCrop((height, width))] + transform_list if crop else transform_list
+    transform_list = [transforms.Resize(new_size)] + transform_list if new_size is not None else transform_list
+    transform_list = [transforms.RandomHorizontalFlip()] + transform_list if train else transform_list
+    transform = transforms.Compose(transform_list)
+    dataset = ImageFilelist(root, file_list, transform=transform)
+    loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=train, drop_last=True, num_workers=num_workers)
+    return loader
 
 
 def get_data_loader_folder(input_folder, batch_size, train, new_size=None,

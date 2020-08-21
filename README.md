@@ -1,6 +1,9 @@
-# imagetranslation
+# Imagetranslation
 image translation research
 
-`train.py` : pretraining with image translation dataset
+## Pretraining with CelebA dataset
 
-`test.py` : train linear layer with landmark train dataset and calculate NMSE with landmark test dataset
+`python train.py --config configs/celeba_filelist.yaml` 
+
+## Supervised training of linear layer & testing with MAFL dataset
+`python test.py --config configs/mafl_test.yaml`

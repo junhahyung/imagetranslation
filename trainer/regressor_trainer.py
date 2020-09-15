@@ -8,7 +8,7 @@ from utils import get_model_list, get_scheduler
 from networks import AdaINGen
 
 
-class Landmark_Tester(nn.Module):
+class RegressorTrainer(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config

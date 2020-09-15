@@ -8,7 +8,7 @@ import torch.backends.cudnn as cudnn
 from torch import nn
 from utils.data_loader import get_all_landmark_loaders
 from utils._utils import get_config, prepare_sub_folder
-from models.tester import Landmark_Tester
+from trainer.regressor_trainer import RegressorTrainer
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--config', type=str, default='configs/mafl/mafl_regressor.yaml', help='Path to the config file.')
@@ -27,7 +27,7 @@ config = get_config(opts.config)
 # data loader
 train_loader, test_loader = get_all_landmark_loaders(config)
 
-lt = Landmark_Tester(config)
+lt = RegressorTrainer(config)
 lt.cuda()
 
 print("learning rate : ", lt.scheduler.get_lr()[0])

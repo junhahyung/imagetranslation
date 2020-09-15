@@ -43,10 +43,10 @@ data:
     dataset: CelebAAligned4MAFLVal_MUNIT
     task: MUNIT # for which task data is served (Munit, None, ...)
     root: /home/junhahyung/unsuplandmark/data/celeba
-    data_list_train_a: /home/junhahyung/unsuplandmark/data/celeba/male_train.txt
-    data_list_train_b: /home/junhahyung/unsuplandmark/data/celeba/female_train.txt
-    data_list_test_a: /home/junhahyung/unsuplandmark/data/celeba/male_test.txt
-    data_list_test_b: /home/junhahyung/unsuplandmark/data/celeba/female_test.txt
+    data_list_train_a: /home/junhahyung/unsuplandmark/data/celeba/munit/male_train.txt
+    data_list_train_b: /home/junhahyung/unsuplandmark/data/celeba/munit/female_train.txt
+    data_list_test_a: /home/junhahyung/unsuplandmark/data/celeba/munit/male_test.txt
+    data_list_test_b: /home/junhahyung/unsuplandmark/data/celeba/munit/female_test.txt
     use_keypoints: False # return keypoints in dataloader, True or False
     batch_size: 32
     default_h: 218 # default height

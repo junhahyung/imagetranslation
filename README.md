@@ -2,11 +2,18 @@
 image translation research
 
 ## Get started
-`pip install .`
+`$ cd imagetranslation`
+
+`$ pip install .`
+
+`$ mkdir data`
+
+download following dataset and place it in `data`
+
 
 ## Pretraining with CelebA dataset
 
-`python scripts/train_munit.py --config configs/celeba/celeba_munit.yaml` 
+`python scripts/train_munit.py --config configs/celeba/celeba4mafl_munit.yaml` 
 
 ## Supervised training of linear layer & testing with MAFL dataset
 `python scripts/train_regressor.py --config configs/mafl/mafl_regressor.yaml`

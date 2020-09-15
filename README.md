@@ -21,3 +21,4 @@ download following dataset and place it in `data`
 TODO
 - add other datasets
 - add random crop in transform
+- refactor regressor_trainer by separating its model parts to models file

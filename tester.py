@@ -2,9 +2,11 @@ import os
 import torch
 
 from torch import nn
+from functions import spatial_logsoftmax
 from utils import get_model_list, get_scheduler
 
 from networks import AdaINGen
+
 
 class Landmark_Tester(nn.Module):
     def __init__(self, config):
@@ -25,15 +27,19 @@ class Landmark_Tester(nn.Module):
 
         img_dim = (1, 3, config["new_size"], config["new_size"])
         content, _ = self.gen.encode(torch.rand(*img_dim))
-        self.D_in = content[0].flatten().shape[0]
-        self.D_out = int(config['num_landmarks']) * 2
-        self.linear = nn.Linear(self.D_in, self.D_out, bias=False)
+        self.unsup_landmarks = int(config['unsup_landmarks'])
+        self.c = content.shape[1]
+        self.w, self.h = content.shape[2], content.shape[3]
+        self.l_in = self.unsup_landmarks * 2
+        self.l_out = int(config['num_landmarks']) * 2
+        self.conv = nn.Conv2d(self.c, self.unsup_landmarks, 1)
+        self.linear = nn.Linear(self.l_in, self.l_out, bias=False)
 
         lr = config['lr']
         beta1 = config['beta1']
         beta2 = config['beta2']
         wd = config['weight_decay']
-        self.opt = torch.optim.Adam([p for p in self.linear.parameters()], lr=lr, betas=(beta1, beta2), weight_decay=wd)
+        self.opt = torch.optim.Adam([p for p in self.linear.parameters()] + [p for p in self.conv.parameters()], lr=lr, betas=(beta1, beta2), weight_decay=wd)
 
         self.scheduler = get_scheduler(self.opt, config)
         #self.loss = nn.MSELoss()
@@ -72,8 +78,14 @@ class Landmark_Tester(nn.Module):
     def encode(self, images):
         content, style = self.gen.encode(images)
         bs = content.shape[0]
-        content = content.view(bs, -1)
-        lmk = self.linear(content)
+        height = content.shape[2]
+        width = content.shape[3]
+        out = self.conv(content)
+        # unsupervised landmarks
+        # N x C x 2
+        ulmk = spatial_logsoftmax(out) * torch.tensor([height, width]).float().cuda()
+        ulmk = ulmk.view(bs, -1)
+        lmk = self.linear(ulmk)
         return lmk
 
     def infer(self, images):
@@ -98,10 +110,7 @@ class Landmark_Tester(nn.Module):
         self.linear.load_state_dict(state_dict)
 
     def forward(self, images, y):
-        y_flat = y.view(y.shape[0], -1).float()
         yp = self.encode(images)
-        #out = self.loss(yp, y_flat)
-        #out.backward()
 
         inter_occs = torch.sqrt(torch.sum((y[:,0,:] - y[:,1,:])**2, -1))
         yp = yp.reshape(-1,5,2)

@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 
 from models.munit_networks import AdaINGen, MsImageDis, VAEGen
-from utils import weights_init, get_model_list, vgg_preprocess, load_vgg16, get_scheduler
+from utils._utils import weights_init, get_model_list, vgg_preprocess, load_vgg16, get_scheduler
 from torch.autograd import Variable
 
 class MUNIT_Trainer(nn.Module):

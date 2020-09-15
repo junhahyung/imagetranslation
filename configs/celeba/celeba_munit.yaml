@@ -1,0 +1,60 @@
+image_save_iter: 10000  # How often do you want to save output images during training
+snapshot_save_iter: 10000  # How often do you want to save trained models
+display_size: 16  # How many images you want to display each time
+log_iter: 10
+
+max_iter: 1000000  # maximum number of training iterations
+lr: 0.0001
+lr_policy: step  # learning rate scheduler
+step_size: 100000  # how often to decay learning rate
+gamma: 0.5  # how much to decay learning rate
+input_dim_a: 3
+input_dim_b: 3
+beta1: 0.5  # Adam parameter
+beta2: 0.999  # Adam parameter
+weight_decay: 0.0001  # weight_decay
+init: kaiming  # initialization [gaussian/kaiming/xavier/orthogonal]
+gan_w: 1
+recon_x_w: 10  # weight of image reconstruction loss
+recon_s_w: 1  # weight of style reconstruction loss
+recon_c_w: 1  # weight of content reconstruction loss
+recon_x_cyc_w: 0  # weight of explicit style augmented cycle consistency loss
+vgg_w: 0  # weight of domain-invariant perceptual loss
+
+# model options
+gen:
+  dim: 64                     # number of filters in the bottommost layer
+  mlp_dim: 256                # number of filters in MLP
+  style_dim: 8                # length of style code
+  activ: relu                 # activation function [relu/lrelu/prelu/selu/tanh]
+  n_downsample: 2             # number of downsampling layers in content encoder
+  n_res: 4                    # number of residual blocks in content encoder/decoder
+  pad_type: reflect           # padding type [zero/reflect]
+dis:
+  dim: 64                     # number of filters in the bottommost layer
+  norm: none                  # normalization layer [none/bn/in/ln]
+  activ: lrelu                # activation function [relu/lrelu/prelu/selu/tanh]
+  n_layer: 4                  # number of layers in D
+  gan_type: lsgan             # GAN loss [lsgan/nsgan]
+  num_scales: 3               # number of scales
+  pad_type: reflect           # padding type [zero/reflect]
+
+data:
+    dataset: CelebAAligned4MAFLVal_MUNIT
+    task: MUNIT # for which task data is served (Munit, None, ...)
+    root: /home/junhahyung/unsuplandmark/data/celeba
+    data_list_train_a: /home/junhahyung/unsuplandmark/data/celeba/male_train.txt
+    data_list_train_b: /home/junhahyung/unsuplandmark/data/celeba/female_train.txt
+    data_list_test_a: /home/junhahyung/unsuplandmark/data/celeba/male_test.txt
+    data_list_test_b: /home/junhahyung/unsuplandmark/data/celeba/female_test.txt
+    use_keypoints: False # return keypoints in dataloader, True or False
+    batch_size: 32
+    default_h: 218 # default height
+    default_w: 178 # default width
+    use_hq_ims: True
+    val_split: celeba
+    val_size: 2000
+    transform: 
+        CenterCrop: [256, 256]  # [h, w] or scalar
+        Resize: 256 # scalar
+

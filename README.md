@@ -1,6 +1,9 @@
 # Imagetranslation
 image translation research
 
+## Get started
+`pip install .`
+
 ## Pretraining with CelebA dataset
 
 `python scripts/train_munit.py --config configs/celeba/celeba_munit.yaml` 

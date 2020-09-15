@@ -36,21 +36,27 @@ gen:
   n_res: 4                    # number of residual blocks in content encoder/decoder
   pad_type: reflect           # padding type [zero/reflect]
 
-# data options
-input_dim: 3                              # number of image channels [1/3]
-num_workers: 8                              # number of data loading threads
-new_size: 256                               # first resize the shortest image side to this size
-crop_image_height: 256                      # random crop image of this height
-crop_image_width: 256                       # random crop image of this width
-data_root: ./datasets/celeba/images     # dataset folder location
-data_list_train: ./datasets/celeba/MAFL/training.txt
-data_list_test: ./datasets/celeba/MAFL/testing.txt
-landmark_dir: ./datasets/celeba/list_landmarks_align_celeba.txt
+data:
+    dataset: CelebAAligned4MAFLVal_MUNIT
+    task: MUNIT # for which task data is served (Munit, None, ...)
+    root: /home/junhahyung/unsuplandmark/data/celeba
+    data_list_train_a: /home/junhahyung/unsuplandmark/data/celeba/male_train.txt
+    data_list_train_b: /home/junhahyung/unsuplandmark/data/celeba/female_train.txt
+    data_list_test_a: /home/junhahyung/unsuplandmark/data/celeba/male_test.txt
+    data_list_test_b: /home/junhahyung/unsuplandmark/data/celeba/female_test.txt
+    use_keypoints: False # return keypoints in dataloader, True or False
+    batch_size: 32
+    default_h: 218 # default height
+    default_w: 178 # default width
+    use_hq_ims: True
+    val_split: celeba
+    val_size: 2000
+    transform: 
+        CenterCrop: [256, 256]  # [h, w] or scalar
+        Resize: 256 # scalar
 
 ## MAFL
 checkpoint_dir: ./outputs/celeba_filelist/checkpoints
 encoder_domain: a
 unsup_landmarks: 50
 num_landmarks: 5
-default_h: 218
-default_w: 178

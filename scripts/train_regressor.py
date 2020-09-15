@@ -6,11 +6,12 @@ import tensorboardX
 import torch.backends.cudnn as cudnn
 
 from torch import nn
-from utils import get_all_landmark_loaders, get_config, prepare_sub_folder
-from tester import Landmark_Tester
+from utils.data_loader import get_all_landmark_loaders
+from utils._utils import get_config, prepare_sub_folder
+from models.tester import Landmark_Tester
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--config', type=str, default='configs/mafl_test.yaml', help='Path to the config file.')
+parser.add_argument('--config', type=str, default='configs/mafl/mafl_regressor.yaml', help='Path to the config file.')
 parser.add_argument('--output_path', type=str, default='.', help='outputs path')
 opts = parser.parse_args()
 
@@ -33,17 +34,17 @@ print("learning rate : ", lt.scheduler.get_lr()[0])
 # initial mse
 test_mse = 0
 with torch.no_grad():
-    for j, (img, lm) in enumerate(test_loader):
-        img, lm = img.cuda().detach(), lm.cuda().detach()
+    for j, data in enumerate(test_loader):
+        img, lm = data['data'].cuda().detach(), data['meta']['keypts_normalized'].cuda().detach()
         normed_mse = lt(img, lm)
         test_mse += normed_mse
     test_mse /= (j+1)
     print("initial test mse : ", float(test_mse))
 
 while True:
-    for i, (img, lm) in enumerate(train_loader):
+    for i, data in enumerate(train_loader):
         lt.update_learning_rate()
-        img, lm = img.cuda().detach(), lm.cuda().detach()
+        img, lm = data['data'].cuda().detach(), data['meta']['keypts_normalized'].cuda().detach()
         normed_mse, lmk = lt.fit(img, lm)
 
         if (i+1) % 500 == 0:
@@ -55,8 +56,8 @@ while True:
 
             with torch.no_grad():
                 test_mse = 0
-                for j, (img, lm) in enumerate(test_loader):
-                    img, lm = img.cuda().detach(), lm.cuda().detach()
+                for j, data in enumerate(test_loader):
+                    img, lm = data['data'].cuda().detach(), data['meta']['keypts_normalized'].cuda().detach()
                     normed_mse = lt(img, lm)
                     test_mse += normed_mse
                 test_mse /= (j+1)
@@ -69,8 +70,8 @@ while True:
         if i > 100000:
             with torch.no_grad():
                 test_mse = 0
-                for j, (img, lm) in enumerate(test_loader):
-                    img, lm = img.cuda().detach(), lm.cuda().detach()
+                for j, data in enumerate(test_loader):
+                    img, lm = data['data'].cuda().detach(), data['meta']['keypts_normalized'].cuda().detach()
                     normed_mse = lt(img, lm)
                     test_mse += normed_mse
                 test_mse /= (j+1)

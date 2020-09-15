@@ -11,7 +11,7 @@ image translation research
 download following dataset and place it in `data`
 
 
-## Pretraining with CelebA dataset
+## Pretraining with CelebA dataset (without overlapping identities with MAFL)
 
 `python scripts/train_munit.py --config configs/celeba/celeba4mafl_munit.yaml` 
 

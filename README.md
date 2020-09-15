@@ -19,7 +19,7 @@ download following dataset and place it in `data`
 `python scripts/train_regressor.py --config configs/mafl/mafl_regressor.yaml`
 
 
-###TODO
+### TODO
 - add other datasets
 - add random crop in transform
 - refactor regressor_trainer by separating its model parts to models file

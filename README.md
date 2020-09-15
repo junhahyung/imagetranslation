@@ -3,7 +3,7 @@ image translation research
 
 ## Pretraining with CelebA dataset
 
-`python train.py --config configs/celeba_filelist.yaml` 
+`python scripts/train_munit.py --config configs/celeba/celeba_munit.yaml` 
 
 ## Supervised training of linear layer & testing with MAFL dataset
-`python test.py --config configs/mafl_test.yaml`
+`python scripts/train_regressor.py --config configs/mafl/mafl_regressor.yaml`

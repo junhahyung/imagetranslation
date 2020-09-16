@@ -8,7 +8,7 @@ image translation research
 
 `$ mkdir data`
 
-download following dataset and place it in `data`
+download [following](https://drive.google.com/file/d/1x1Dm9hNbqda30KEYC8hLX1_s_cIE5Aoc/view?usp=sharing) dataset and place it in `data`
 
 
 ## Pretraining with CelebA dataset (without overlapping identities with MAFL)

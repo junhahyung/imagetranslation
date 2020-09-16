@@ -37,7 +37,7 @@ gen:
   pad_type: reflect           # padding type [zero/reflect]
 
 data:
-    dataset: CelebAAligned4MAFLVal
+    dataset: MAFLAligned
     task: MUNIT # for which task data is served (Munit, None, ...)
     root: /home/junhahyung/unsuplandmark/data/celeba
     data_list_train_a: /home/junhahyung/unsuplandmark/data/celeba/male_train.txt

@@ -25,7 +25,7 @@ class RegressorTrainer(nn.Module):
         for p in self.gen.parameters():
             p.requires_grad = False
 
-        img_dim = (1, 3, config["new_size"], config["new_size"])
+        img_dim = (1, 3, config["data"]['transform']['Resize'], config["data"]['transform']['Resize'])
         content, _ = self.gen.encode(torch.rand(*img_dim))
         self.unsup_landmarks = int(config['unsup_landmarks'])
         self.c = content.shape[1]

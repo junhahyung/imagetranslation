@@ -6,7 +6,7 @@ import tensorboardX
 import torch.backends.cudnn as cudnn
 
 from torch import nn
-from utils.data_loader import get_all_landmark_loaders
+from utils.data_loader import get_all_data_loaders
 from utils._utils import get_config, prepare_sub_folder
 from trainer.regressor_trainer import RegressorTrainer
 
@@ -25,7 +25,7 @@ cudnn.benchmark = True
 config = get_config(opts.config)
 
 # data loader
-train_loader, test_loader = get_all_landmark_loaders(config)
+train_loader, test_loader = get_all_data_loaders(config)
 
 lt = RegressorTrainer(config)
 lt.cuda()

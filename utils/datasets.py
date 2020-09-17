@@ -77,19 +77,14 @@ class CelebABase(Dataset):
         meta = {}
         if self.use_keypoints:
             kp = self.keypoints[index].copy()
-            kp_ori = kp
             H, W, kp = align_keypoints(kp, self.config)
             kp = torch.tensor(kp)
             meta = {
-                'keypts_ori': kp_ori,
                 'keypts': kp,
                 'keypts_normalized': kp_normalize(H, W, kp),
                 'index': index
             }
         img = self.default_imgloader(os.path.join(self.subdir, self.filenames[index]))
-        img_ori = self.default_imgloader(os.path.join(self.subdir, self.filenames[index]))
-        img_ori = transforms.ToTensor()(img_ori)
-        meta['img_ori'] = img_ori
 
         if self.transform is not None:
             img = self.transform(img)

@@ -44,7 +44,7 @@ data:
     task: TUNIT # for which task data is served (Munit, None, ...)
     root: /home/nas1_userE/ULD_dataset/celeba
     use_keypoints: False # return keypoints in dataloader, True or False
-    batch_size: 2
+    batch_size: 16
     default_h: 218 # default height
     default_w: 178 # default width
     use_hq_ims: True

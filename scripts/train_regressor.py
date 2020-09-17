@@ -47,7 +47,7 @@ while True:
         img, lm = data['data'].cuda().detach(), data['meta']['keypts_normalized'].cuda().detach()
         normed_mse, lmk = lt.fit(img, lm)
 
-        if (i+1) % 500 == 0:
+        if (i+1) % 100 == 0:
             normed_mse = float(normed_mse)
             print("----iteration {}----".format(i))
             print("learning rate : ", lt.scheduler.get_lr()[0])

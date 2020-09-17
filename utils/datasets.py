@@ -7,6 +7,7 @@ import pandas as pd
 from utils._utils import get_instance
 
 from PIL import Image
+from torchvision import transforms
 from torch.utils.data.dataset import Dataset
 
 
@@ -58,7 +59,7 @@ def align_keypoints(kp, config):
 def kp_normalize(H, W, kp):
     kp = kp.clone()
     kp[..., 0] = 2. * kp[..., 0] / (W - 1) - 1
-    kp[..., 0] = 2. * kp[..., 1] / (H - 1) - 1
+    kp[..., 1] = 2. * kp[..., 1] / (H - 1) - 1
     return kp 
 
 
@@ -76,14 +77,20 @@ class CelebABase(Dataset):
         meta = {}
         if self.use_keypoints:
             kp = self.keypoints[index].copy()
+            kp_ori = kp
             H, W, kp = align_keypoints(kp, self.config)
             kp = torch.tensor(kp)
             meta = {
+                'keypts_ori': kp_ori,
                 'keypts': kp,
                 'keypts_normalized': kp_normalize(H, W, kp),
                 'index': index
             }
         img = self.default_imgloader(os.path.join(self.subdir, self.filenames[index]))
+        img_ori = self.default_imgloader(os.path.join(self.subdir, self.filenames[index]))
+        img_ori = transforms.ToTensor()(img_ori)
+        meta['img_ori'] = img_ori
+
         if self.transform is not None:
             img = self.transform(img)
         

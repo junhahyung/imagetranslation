@@ -2,10 +2,10 @@ import os
 import torch
 
 from torch import nn
-from functions import spatial_logsoftmax
-from utils import get_model_list, get_scheduler
+from models.functions import spatial_logsoftmax
+from utils._utils import get_model_list, get_scheduler
 
-from networks import AdaINGen
+from models.munit_networks import AdaINGen
 
 
 class RegressorTrainer(nn.Module):

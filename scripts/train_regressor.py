@@ -41,6 +41,7 @@ with torch.no_grad():
     test_mse /= (j+1)
     print("initial test mse : ", float(test_mse))
 
+'''
 while True:
     for i, data in enumerate(train_loader):
         lt.update_learning_rate()
@@ -77,3 +78,4 @@ while True:
                 test_mse /= (j+1)
                 print("final test mse : ", float(test_mse))
             sys.exit('Finish training')
+'''

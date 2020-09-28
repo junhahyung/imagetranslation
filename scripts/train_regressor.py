@@ -42,7 +42,9 @@ with torch.no_grad():
     print("initial test mse : ", float(test_mse))
 
 while True:
+    total_iter = 0
     for i, data in enumerate(train_loader):
+        total_iter += 1
         lt.update_learning_rate()
         img, lm = data['data'].cuda().detach(), data['meta']['keypts_normalized'].cuda().detach()
         normed_mse, lmk = lt.fit(img, lm)
@@ -67,13 +69,13 @@ while True:
             train_writer.add_scalar('data/test_normed_mse', test_mse, i)
             lt.save(checkpoint_directory, i)
 
-        if i > 100000:
-            with torch.no_grad():
-                test_mse = 0
-                for j, data in enumerate(test_loader):
-                    img, lm = data['data'].cuda().detach(), data['meta']['keypts_normalized'].cuda().detach()
-                    normed_mse = lt(img, lm)
-                    test_mse += normed_mse
-                test_mse /= (j+1)
-                print("final test mse : ", float(test_mse))
-            sys.exit('Finish training')
+    if total_iter > 100000:
+        with torch.no_grad():
+            test_mse = 0
+            for j, data in enumerate(test_loader):
+                img, lm = data['data'].cuda().detach(), data['meta']['keypts_normalized'].cuda().detach()
+                normed_mse = lt(img, lm)
+                test_mse += normed_mse
+            test_mse /= (j+1)
+            print("final test mse : ", float(test_mse))
+        sys.exit('Finish training')

@@ -2,18 +2,12 @@ import os
 import torch
 import argparse
 
-<<<<<<< HEAD
 from torch import nn
 
 from utils._utils import get_config, get_model_list, get_scheduler
 from utils.data_loader import get_all_data_loaders
 
 from models.functions import spatial_logsoftmax
-=======
-from utils._utils import get_config, get_model_list, get_scheduler
-from utils.data_loader import get_all_data_loaders
-
->>>>>>> 52edbdaecf808af0e571c3ecff0f6e17c83a1056
 from models.tunit.generator import Generator as Generator
 from models.tunit.discriminator import Discriminator as Discriminator
 from models.tunit.guidingNet import GuidingNet
@@ -95,11 +89,7 @@ class RegressorTrainer(nn.Module):
             p.requires_grad = False
 
         img_dim = (1, 3, config["data"]['transform']['Resize'], config["data"]['transform']['Resize'])
-<<<<<<< HEAD
         content = self.encoder(torch.rand(*img_dim).cuda())
-=======
-        content = self.encoder(torch.rand(*img_dim))
->>>>>>> 52edbdaecf808af0e571c3ecff0f6e17c83a1056
         self.unsup_landmarks = int(config['unsup_landmarks'])
         self.c = content.shape[1]
         self.w, self.h = content.shape[2], content.shape[3]

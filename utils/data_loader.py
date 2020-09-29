@@ -46,6 +46,9 @@ def get_all_data_loaders(config):
         return train_loader, test_loader
 
 def get_transform(config):
+    # 300W does not need transform arg
+    if not 'transform' in config['data']:
+        return None
     tconf = config['data']['transform']
     transform_list = [transforms.ToTensor(),
                       transforms.Normalize((0.5, 0.5, 0.5), 
@@ -93,7 +96,10 @@ def get_default_data_loader(config, train, num_workers=4):
     batch_size = config['data']['batch_size']
     use_keypoints = config['data']['use_keypoints']
     transform = get_transform(config)
-    dataset = get_instance(data_module, config, 'data', 'dataset', train=train, transform=transform, use_keypoints=use_keypoints)
+    if transform:
+        dataset = get_instance(data_module, config, 'data', 'dataset', train=train, transform=transform, use_keypoints=use_keypoints)
+    else:
+        dataset = get_instance(data_module, config, 'data', 'dataset', train=train, use_keypoints=use_keypoints)
     loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=train, drop_last=True, num_workers=num_workers)
 
     return loader

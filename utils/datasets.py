@@ -345,7 +345,7 @@ class ThreeHundredW(Dataset):
         bx = bcx_ - bw_ / 2 + 1
         bX = bcx_ + bw_ / 2
         by = bcy_ - bw_ / 2 + 1
-        bY = bcy_ + bw / 2
+        bY = bcy_ + bw_ / 2
         pp = (preresize_sz - bw_) / 2
         bx = int(bx - pp)
         bX = int(bX + pp)

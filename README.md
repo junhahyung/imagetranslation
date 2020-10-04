@@ -14,6 +14,7 @@ download [following](https://drive.google.com/file/d/1x1Dm9hNbqda30KEYC8hLX1_s_c
 ## Pretraining with CelebA dataset (without overlapping identities with MAFL)
 
 `python scripts/train_munit.py --config configs/celeba/celeba4mafl_munit.yaml` 
+
 `python scripts/train_tunit.py  --data_path '../data/300w/300w' --p_semi 0.0 --dataconfig configs/celeba/celeba4mafl_tunit.yaml` 
 
 ## Supervised training of linear layer & testing with MAFL dataset

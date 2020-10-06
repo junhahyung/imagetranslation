@@ -267,6 +267,7 @@ def main_worker(gpu, ngpus_per_node, args, dataconfig):
     queue_loader = train_loader['UNSUP'] if 0.0 < args.p_semi < 1.0 else train_loader
 
     queue = initialize_queue(networks['C_EMA'], args.gpu, queue_loader, feat_size=args.sty_dim)
+    print("initialized queue")
 
     # print all the argument
     print_args(args)
@@ -312,6 +313,7 @@ def main_worker(gpu, ngpus_per_node, args, dataconfig):
         #validationFunc(val_loader, networks, epoch, args, {'logger': logger, 'queue': queue})
 
         # Calc fid
+        '''
         if epoch >= args.fid_start and args.dataset not in ['ffhq', 'lsun_car', 'afhq_cat', 'afhq_dog', 'afhq_wild']:
             fid_ema = calcFIDBatch(args, {'VAL': val_loader, 'TRAIN': train_loader}, networks, 'EMA', train_dataset)
             fid_ema_mean = sum(fid_ema) / (len(fid_ema))
@@ -321,7 +323,9 @@ def main_worker(gpu, ngpus_per_node, args, dataconfig):
                 save_model(args, 4567, networks, opts)
 
             print("Mean FID : [{}] AT EPOCH[{}] G_EMA / BEST EVER[{}]".format(fid_ema_mean, epoch + 1, fid_best_ema))
+        '''
 
+        '''
         # Write logs
         if not args.multiprocessing_distributed or (args.multiprocessing_distributed and args.rank % args.ngpus_per_node == 0):
             if (epoch + 1) % 10 == 0:
@@ -333,7 +337,7 @@ def main_worker(gpu, ngpus_per_node, args, dataconfig):
                     add_logs(args, logger, 'STATEMA/G_EMA/mFID', fid_ema_mean, epoch + 1)
             if len(args.epoch_acc) > 0:
                 add_logs(args, logger, 'STATC/Acc', float(args.epoch_acc[-1]), epoch + 1)
-
+        '''
 
 #################
 # Sub functions #

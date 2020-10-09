@@ -25,7 +25,7 @@ class GuidingNet(nn.Module):
     def __init__(self, img_size=64, output_k={'cont': 128, 'disc': 10}):
         super(GuidingNet, self).__init__()
         # network layers setting
-        self.features = make_layers(cfg['vgg11'], True)
+        self.features = make_layers(cfg['vgg11'], False, True)
 
         self.disc = nn.Linear(512, output_k['disc'])
         self.cont = nn.Linear(512, output_k['cont'])
@@ -70,7 +70,7 @@ class GuidingNet(nn.Module):
         return disc
 
 
-def make_layers(cfg, batch_norm=False):
+def make_layers(cfg, batch_norm=False, layer_norm=False):
     layers = []
     in_channels = 3
     for v in cfg:
@@ -80,6 +80,8 @@ def make_layers(cfg, batch_norm=False):
             conv2d = nn.Conv2d(in_channels, v, kernel_size=3, padding=1)
             if batch_norm:
                 layers += [conv2d, nn.BatchNorm2d(v), nn.ReLU(inplace=False)]
+            elif layer_norm:
+                layers += [conv2d, nn.LayerNorm(v), nn.ReLU(inplace=False)]
             else:
                 layers += [conv2d, nn.ReLU(inplace=False)]
             in_channels = v

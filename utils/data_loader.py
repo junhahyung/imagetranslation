@@ -130,12 +130,13 @@ def get_munit_data_loader(config, train, group, num_workers=4):
     return loader
 
 
-def get_tunit_data_loader(config, train, num_workers=4): 
+def get_tunit_data_loader(config, train, num_workers=0): 
     dataset = config['data']['dataset']
     batch_size = config['data']['batch_size']
     use_keypoints = config['data']['use_keypoints']
     transform = get_duplicate_transform(config)
     dataset = get_instance(data_module, config, 'data', 'dataset', train=train, transform=transform, use_keypoints=use_keypoints)
+    print('loaded tunit dataset, train: {}, len: {}'.format(train, len(dataset)))
     loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=train, drop_last=True, num_workers=num_workers)
 
     return loader, dataset

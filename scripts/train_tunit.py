@@ -47,11 +47,11 @@ parser.add_argument('--data_path', type=str, default='../data',
                     help='Dataset directory. Please refer Dataset in README.md')
 parser.add_argument('--workers', default=4, type=int, help='the number of workers of data loader')
 
-parser.add_argument('--model_name', type=str, default='GAN',
+parser.add_argument('--model_name', type=str, default='TUNIT',
                     help='Prefix of logs and results folders. '
                          'ex) --model_name=ABC generates ABC_20191230-131145 in logs and results')
 
-parser.add_argument('--epochs', default=200, type=int, help='Total number of epochs to run. Not actual epoch.')
+parser.add_argument('--epochs', default=2000, type=int, help='Total number of epochs to run. Not actual epoch.')
 parser.add_argument('--iters', default=1000, type=int, help='Total number of iterations per epoch')
 parser.add_argument('--batch_size', default=32, type=int,
                     help='Batch size for training')
@@ -285,7 +285,7 @@ def main_worker(gpu, ngpus_per_node, args, dataconfig):
         record_txt.close()
 
     # Run
-    #validationFunc(val_loader, networks, 0, args, {'logger': logger, 'queue': queue})
+    validationFunc(val_loader, networks, 0, args, {'logger': logger, 'queue': queue})
 
     fid_best_ema = 999.0
 
@@ -310,7 +310,8 @@ def main_worker(gpu, ngpus_per_node, args, dataconfig):
 
         trainFunc(train_loader, networks, opts, epoch, args, {'logger': logger, 'queue': queue})
 
-        #validationFunc(val_loader, networks, epoch, args, {'logger': logger, 'queue': queue})
+        if (epoch + 1) % (args.epochs // 10) == 0:
+            validationFunc(val_loader, networks, epoch, args, {'logger': logger, 'queue': queue})
 
         # Calc fid
         '''

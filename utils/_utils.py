@@ -342,3 +342,13 @@ def pad_and_crop(im, rr):
     im = im[rr[0]:rr[1], rr[2]:rr[3]]
 
     return im
+
+class NoGradWrapper(nn.Module):
+    def __init__(self, wrapped):
+        super(NoGradWrapper, self).__init__()
+        self.wrapped_module = wrapped
+
+    def forward(self, *args, **kwargs):
+        with torch.no_grad():
+            return self.wrapped_module.forward(*args, **kwargs)
+

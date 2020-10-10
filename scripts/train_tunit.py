@@ -291,7 +291,7 @@ def main_worker(gpu, ngpus_per_node, args, dataconfig):
 
     for epoch in range(args.start_epoch, args.epochs):
         print("START EPOCH[{}]".format(epoch+1))
-        if (epoch + 1) % (args.epochs // 10) == 0:
+        if (epoch + 1) % (args.epochs // 100) == 0:
             save_model(args, epoch, networks, opts)
 
         if args.distributed:

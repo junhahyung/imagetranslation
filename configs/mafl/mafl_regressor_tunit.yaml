@@ -1,13 +1,45 @@
 model: TUNIT
-img_size: 256
+img_size: 128 
 sty_dim: 128
 output_k: 10
 dims: 2048
+loss: regression_loss
+metrics: [inter_ocular_error]
+epoch: 1000
 
 keypoint_regressor:
     type: IntermediateKeypointPredictor
     args:
-        input_channel: 
+        input_channel: 512
         num_annotated_points: 5
         num_intermediate_points: 50
         softargmax_mul: 100
+
+optimizer:
+    type: Adam
+    args:
+        lr: 0.001
+        weight_decay: 0.0005
+        amsgrad: true
+
+lr_scheduler:
+    type: MultiStepLR
+    args:
+        milestones: [100, 250]
+        gamma: 0.1
+
+data:
+    dataset: MAFLAligned
+    task: None # for which task data is served (Munit, None, ...)
+    root: /home/nas_datasets/ULD_dataset/celeba
+    use_keypoints: True # return keypoints in dataloader, True or False
+    batch_size: 32
+    default_h: 218 # default height
+    default_w: 178 # default width
+    use_hq_ims: True
+    val_split: celeba
+    val_size: 2000
+    transform: 
+        CenterCrop: [256, 256]  # [h, w] or scalar
+        Resize: 256 # scalar
+

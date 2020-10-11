@@ -222,6 +222,7 @@ class CelebAAligned4MAFLVal_MUNIT(CelebABase):
         self.filenames = list(self.data.index)
 
 class MAFLAligned(CelebABase):
+    eye_kp_idxs = [0, 1]
     def __init__(self, config, train=True, transform=None, use_keypoints=True):
         self.config = config
         self.root = config['data']['root']
@@ -261,7 +262,7 @@ class MAFLAligned(CelebABase):
 
 
 class ThreeHundredW(Dataset):
-    # eye_kp_idxs = [36, 45]
+    eye_kp_idxs = [36, 45]
     def __init__(self, config, train=True, do_augmentations=True, use_keypoints=True):
         from scipy.io import loadmat
 

@@ -4,6 +4,7 @@ import torch
 import argparse
 import tensorboardX
 import torch.backends.cudnn as cudnn
+from tqdm import tqdm
 
 from torch import nn
 from utils.data_loader import get_all_data_loaders
@@ -12,14 +13,19 @@ from utils._utils import get_config, prepare_sub_folder
 from argparse import Namespace
 from datetime import datetime
 from utils.utils_tunit import *
-from utils._utils import get_instance
+from utils._utils import get_instance, NoGradWrapper
 import models.model as module_arch
+import models.metric as module_metric
 
 ### TUNIT ###
 from models.tunit.generator import Generator as Generator
 from models.tunit.discriminator import Discriminator as Discriminator
 from models.tunit.guidingNet import GuidingNet
 from models.tunit.inception import InceptionV3
+import models.loss as module_loss
+
+import matplotlib.pyplot as plt
+from PIL import Image
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--config', type=str, default='configs/mafl/mafl_regressor_tunit.yaml', help='Path to the config file.')
@@ -62,6 +68,7 @@ def load_model(args, networks, opts):
 # model builder for tunit
 def build_model_tunit(args):
     args.to_train = 'CDGI'
+    #args.to_train = 'G'
 
     networks = {}
     opts = {}
@@ -106,31 +113,158 @@ def main():
         return
 
     config = get_config(args.config)
-    config = Namespace(**config)
-    config.gpu = args.gpu
-    config.load_model = args.load_model
-    config.model_name = '{}-{}_{}'.format(config.load_model, 'regressor', datetime.now().strftime("%Y%m%d-%H%M%S"))
+
+
+    config_n = Namespace(**config)
+    config_n.gpu = args.gpu
+    config_n.distributed = False
+    config_n.multiprocessing_distributed = False
+    config_n.load_model = args.load_model
+    #config.model_name = '{}-{}_{}'.format(config.load_model, 'regressor', datetime.now().strftime("%Y%m%d-%H%M%S"))
+    config_n.model_name = args.load_model
 
     makedirs('./logs')
     makedirs('./results')
     
-    config.log_dir = os.path.join('./logs', config.model_name)
-    config.event_dir = os.path.join(config.log_dir, 'events')
-    config.res_dir = os.path.join('./results', config.model_name)
-    makedirs(config.log_dir)
+    config_n.log_dir = os.path.join('./logs', config_n.model_name)
+    config_n.event_dir = os.path.join(config_n.log_dir, 'events')
+    config_n.res_dir = os.path.join('./results', config_n.model_name)
+    config_n.img_dir = os.path.join(config_n.res_dir, 'regressor_imgs')
+    config_n.regressor_log_dir = os.path.join(config_n.log_dir, 'regressor_logs')
+    makedirs(config_n.img_dir)
+    makedirs(config_n.log_dir)
+    makedirs(config_n.regressor_log_dir)
     cudnn.benchmark = True
 
-    if config.model == 'TUNIT':
-        networks, opts = build_model_tunit(config)
-        load_model(config, networks, opts)
+    kp_regressor = get_instance(module_arch, config, 'keypoint_regressor', 'type', input_dim=config_n.keypoint_regressor['args']['input_channel'])
+
+    if config_n.model == 'TUNIT':
+        networks, opts = build_model_tunit(config_n)
+        load_model(config_n, networks, opts)
         for key in networks.keys():
             networks[key].eval()
         encoder = networks['G'].cnt_encoder
-    print(encoder)
+    
+    encoder = NoGradWrapper(encoder)
+    model = nn.Sequential(encoder, kp_regressor)
+    model = model.cuda()
 
-    input_dim = 64 if config.img_size < 256 else 32
-    kp_regressor = get_instance(module_arch, config, 'keypoint_regressor', 'type', input_dim=input_dim)
-    print(kp_regressor)
+    Loss = getattr(module_loss, config_n.loss)
+    metric = [getattr(module_metric, met) for met in config['metrics']][0]
+
+    #all_params = list(model.parameters())
+    trainable_params = list(filter(lambda p: p.requires_grad, kp_regressor.parameters()))
+
+    optimizer = getattr(torch.optim, config['optimizer']['type'])(trainable_params, **config['optimizer']['args'])
+    lr_scheduler = getattr(torch.optim.lr_scheduler, config['lr_scheduler']['type'])(optimizer, **config['lr_scheduler']['args'])
+
+
+    train_loader, test_loader = get_all_data_loaders(config)
+    display_data = list(test_loader)[0]
+
+    data = display_data['data'].cuda().detach()
+    out = model(data)
+    pred = out[0]
+    for i in range(10):
+        fig, axs = plt.subplots(1,2)
+        img = display_data['data'][i].cpu().permute(1,2,0)
+        kp = display_data['meta']['keypts'][i]
+        kp_pred = pred[i].detach().cpu()
+        kp_pred = (kp_pred + 1) / 2 * 255
+        _out = (out[0][i,:,:], out[1][i,:,:])
+        _meta = {}
+        _meta['keypts_normalized'] = display_data['meta']['keypts_normalized'][i].unsqueeze(0)
+        ioe = metric(_out, _meta, config)
+        axs[0].imshow(img)
+        axs[1].imshow(img)
+        axs[0].scatter(kp[:,0], kp[:,1])
+        axs[1].scatter(kp_pred[:,0], kp_pred[:,1])
+        plt.savefig('{}/{}_{}_{}.png'.format(config_n.img_dir, 'before_training', ioe, i+1))
+
+    test_ioe = 0
+    test_loss = 0
+    with torch.no_grad():
+        for j, data in enumerate(test_loader):
+            img, meta = data['data'].cuda().detach(), data['meta']
+            out = model(img)
+            loss = Loss(out, meta)
+            ioe = metric(out, meta, config)
+            test_loss += loss
+            test_ioe += ioe
+        test_loss /= (j+1)
+        test_ioe /= (j+1)
+
+
+
+    for epoch in range(config['epoch']):
+        print('%%%% start epoch {} %%%%'.format(epoch+1))
+        epoch_loss = 0
+        epoch_ioe = 0
+        for batch_idx, data in enumerate(tqdm(train_loader)):
+            optimizer.zero_grad()
+            img, meta = data['data'].cuda().detach(), data['meta']
+            out = model(img)
+            loss = Loss(out, meta)
+            ioe = metric(out, meta, config)
+            epoch_ioe += ioe
+            epoch_loss += loss
+
+            loss.backward()
+            optimizer.step()
+        epoch_loss /= (batch_idx + 1)
+        epoch_ioe /= (batch_idx + 1)
+
+        test_ioe = 0
+        test_loss = 0
+        with torch.no_grad():
+            for j, data in enumerate(test_loader):
+                img, meta = data['data'].cuda().detach(), data['meta']
+                out = model(img)
+                loss = Loss(out, meta)
+                ioe = metric(out, meta, config)
+                test_loss += loss
+                test_ioe += ioe
+            test_loss /= (j+1)
+            test_ioe /= (j+1)
+
+        print('--- epoch {} ---'.format(epoch+1))
+        print('train loss: {} / test loss: {}'.format(epoch_loss, test_loss))
+        print('train ioe: {} / test ioe: {}'.format(epoch_ioe, test_ioe))
+        print('learning rate: {}'.format(lr_scheduler.get_lr()[0]))
+
+        lr_scheduler.step()
+
+        if (epoch+1) % 1 == 0:
+            # save image
+            data = display_data['data'].cuda().detach()
+            out = model(data)
+            pred = out[0]
+            for i in range(10):
+                fig, axs = plt.subplots(1,2)
+                img = display_data['data'][i].cpu().permute(1,2,0)
+                kp = display_data['meta']['keypts'][i]
+                kp_pred = pred[i].detach().cpu()
+                kp_pred = (kp_pred + 1) / 2 * 255
+                _out = (out[0][i,:,:], out[1][i,:,:])
+                _meta = {}
+                _meta['keypts_normalized'] = display_data['meta']['keypts_normalized'][i].unsqueeze(0)
+                ioe = metric(_out, _meta, config)
+                axs[0].imshow(img)
+                axs[1].imshow(img)
+                axs[0].scatter(kp[:,0], kp[:,1])
+                axs[1].scatter(kp_pred[:,0], kp_pred[:,1])
+                plt.savefig('{}/{}_{}_{}.png'.format(config_n.img_dir, epoch+1, ioe, i+1))
+
+            # save model
+
+            save_path = '{}/model_{}.ckpt'.format(config_n.regressor_log_dir, epoch+1)
+            torch.save(model.state_dict(), save_path)
+        
+
+
+
+
+
 
 main()
 

@@ -59,7 +59,7 @@ class IntermediateKeypointPredictor(nn.Module):
         self.linear = linearlist
 
     def forward(self, input):
-        input = input[0].detach()
+        input = input.detach()
         B, C, H, W = input.shape
 
         assert self.descriptor_dimension == C

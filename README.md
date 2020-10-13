@@ -18,10 +18,10 @@ download [following](https://drive.google.com/file/d/1x1Dm9hNbqda30KEYC8hLX1_s_c
 `python scripts/train_tunit.py  --data_path 'data/celeba' --p_semi 0.0 --dataconfig configs/celeba/celeba4mafl_tunit.yaml` 
 
 ## Supervised training of linear layer & testing with MAFL dataset
-`python scripts/train_regressor.py --config configs/mafl/mafl_regressor.yaml`
+MUNIT (not finished yet, but working): `python scripts/train_regressor_deprecated.py --config configs/mafl/mafl_regressor.yaml`
+
+TUNIT: `python scripts/train_regressor.py --load_model GAN_20201007-224815`
 
 
 ### TODO
-- add other datasets
-- add random crop in transform
-- refactor regressor_trainer by separating its model parts to models file
+

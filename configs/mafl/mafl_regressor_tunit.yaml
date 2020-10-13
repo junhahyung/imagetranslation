@@ -5,7 +5,7 @@ output_k: 10
 dims: 2048
 loss: regression_loss
 metrics: [inter_ocular_error]
-epoch: 1000
+epoch: 300
 
 keypoint_regressor:
     type: IntermediateKeypointPredictor

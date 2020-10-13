@@ -91,7 +91,7 @@ def get_duplicate_transform(config):
     return transform
 
 
-def get_default_data_loader(config, train, num_workers=4): 
+def get_default_data_loader(config, train, num_workers=0): 
     dataset = config['data']['dataset']
     batch_size = config['data']['batch_size']
     use_keypoints = config['data']['use_keypoints']

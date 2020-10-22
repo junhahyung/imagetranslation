@@ -51,7 +51,7 @@ parser.add_argument('--model_name', type=str, default='TUNIT',
                     help='Prefix of logs and results folders. '
                          'ex) --model_name=ABC generates ABC_20191230-131145 in logs and results')
 
-parser.add_argument('--epochs', default=2000, type=int, help='Total number of epochs to run. Not actual epoch.')
+parser.add_argument('--epochs', default=200, type=int, help='Total number of epochs to run. Not actual epoch.')
 parser.add_argument('--iters', default=1000, type=int, help='Total number of iterations per epoch')
 parser.add_argument('--batch_size', default=32, type=int,
                     help='Batch size for training')
@@ -239,6 +239,8 @@ def main_worker(gpu, ngpus_per_node, args, dataconfig):
         assert args.num_cls == len(args.att_to_use)
     elif args.dataset in ['ffhq', 'lsun_car']:
         args.att_to_use = [0, ]
+    elif args.dataset == 'celeba':
+        args.att_to_use = [0,]
 
     # IIC statistics
     args.epoch_acc = []
@@ -258,7 +260,7 @@ def main_worker(gpu, ngpus_per_node, args, dataconfig):
     # get dataset and data loader
     #train_dataset, val_dataset = get_dataset(args.dataset, args)
     #train_loader, val_loader, train_sampler = get_loader(args, {'train': train_dataset, 'val': val_dataset})
-    train_loader, val_loader, train_sampler = get_all_data_loaders(dataconfig)
+    train_loader, val_loader, train_sampler = get_all_data_loaders(dataconfig, distributed=args.distributed)
     print("loaded dataset")
 
     # map the functions to execute - un / sup / semi-
@@ -291,7 +293,7 @@ def main_worker(gpu, ngpus_per_node, args, dataconfig):
 
     for epoch in range(args.start_epoch, args.epochs):
         print("START EPOCH[{}]".format(epoch+1))
-        if (epoch + 1) % (args.epochs // 100) == 0:
+        if (epoch + 1) % (args.epochs // 10) == 0:
             save_model(args, epoch, networks, opts)
 
         if args.distributed:
@@ -310,8 +312,7 @@ def main_worker(gpu, ngpus_per_node, args, dataconfig):
 
         trainFunc(train_loader, networks, opts, epoch, args, {'logger': logger, 'queue': queue})
 
-        if (epoch + 1) % (args.epochs // 10) == 0:
-            validationFunc(val_loader, networks, epoch, args, {'logger': logger, 'queue': queue})
+        validationFunc(val_loader, networks, epoch, args, {'logger': logger, 'queue': queue})
 
         # Calc fid
         '''
@@ -326,19 +327,19 @@ def main_worker(gpu, ngpus_per_node, args, dataconfig):
             print("Mean FID : [{}] AT EPOCH[{}] G_EMA / BEST EVER[{}]".format(fid_ema_mean, epoch + 1, fid_best_ema))
         '''
 
-        '''
         # Write logs
         if not args.multiprocessing_distributed or (args.multiprocessing_distributed and args.rank % args.ngpus_per_node == 0):
             if (epoch + 1) % 10 == 0:
                 save_model(args, epoch, networks, opts)
+            '''
             if not args.train_mode in ['CLS_UN', 'CLS_SEMI']:
                 if epoch >= args.fid_start and args.dataset not in ['ffhq', 'lsun_car']:
                     for idx_fid in range(len(args.att_to_use)):
                         add_logs(args, logger, 'STATEMA/G_EMA{}/FID'.format(idx_fid), fid_ema[idx_fid], epoch + 1)
                     add_logs(args, logger, 'STATEMA/G_EMA/mFID', fid_ema_mean, epoch + 1)
+            '''
             if len(args.epoch_acc) > 0:
                 add_logs(args, logger, 'STATC/Acc', float(args.epoch_acc[-1]), epoch + 1)
-        '''
 
 #################
 # Sub functions #

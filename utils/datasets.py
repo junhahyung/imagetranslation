@@ -386,10 +386,9 @@ class ThreeHundredW(Dataset):
 
 
 if __name__ == '__main__':
-    with open('configs/300w/300w_test.yaml', 'r') as stream:
+    with open('configs/celeba/celeba4mafl_tunit.yaml', 'r') as stream:
         config = yaml.load(stream)
 
-    w = ThreeHundredW(config)
-    for i in range(10):
-        print(w[i]['data'].shape)
-
+    w = CelebAAligned4MAFLVal(config)
+    #print(torch.tensor(w['data']).shape)
+    print(len(w))

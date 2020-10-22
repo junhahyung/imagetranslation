@@ -145,11 +145,8 @@ def initialize_queue(model_k, device, train_loader, feat_size=128):
     queue = torch.zeros((0, feat_size), dtype=torch.float)
     queue = queue.to(device)
 
-    print('in i q')
     for _, data in enumerate(train_loader):
-        print('start')
         data = data['data']
-        x_k = data
         x_k = data[1]
         x_k = x_k.cuda(device)
         outs = model_k(x_k)

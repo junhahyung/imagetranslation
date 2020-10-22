@@ -75,6 +75,7 @@ class IntermediateKeypointPredictor(nn.Module):
         mass = smcorr.sum(dim=(3, 4))
         xpred = (smcorr * xx.view(1, 1, 1, H, W)).sum(dim=(3, 4)) / mass
         ypred = (smcorr * yy.view(1, 1, 1, H, W)).sum(dim=(3, 4)) / mass
+        # B x nA x nI x 2
         intermediate = torch.stack((xpred, ypred), dim=3)
         # pred = [
         #     self.linear[i](intermediate[:, i, :, :].reshape(B, -1)).reshape(B, 1, 2)

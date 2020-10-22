@@ -40,17 +40,16 @@ def validateUN(data_loader, networks, epoch, args, additional=None):
     C_EMA.eval()
     G_EMA.eval()
     # data loader
-    #val_dataset = data_loader['TRAINSET'] if args.dataset in ['animal_faces', 'lsun_car', 'ffhq'] else data_loader['VALSET']
-    val_dataset = data_loader['VALSET']
+    val_dataset = data_loader['TRAINSET'] if args.dataset in ['animal_faces', 'lsun_car', 'ffhq'] else data_loader['VALSET']
     val_loader = data_loader['VAL']
 
-    '''
     # Calculate Acc. of Classifier
+    # not used with celeba setting - junha
+    '''
     with torch.no_grad():
         if not args.dataset in ['afhq_dog', 'afhq_cat', 'afhq_wild', 'lsun_car', 'ffhq'] and args.output_k == len(args.att_to_use):
             is_best = cluster_eval(args, C, val_loader, val_loader)
             print("EPOCH {} / BEST EVER {:.4f}".format(epoch+1, max(args.epoch_acc)))
-            '''
     
     # Parse images for average reference vector
     x_each_cls = []
@@ -60,13 +59,11 @@ def validateUN(data_loader, networks, epoch, args, additional=None):
         num_tmp_val = -7000
     elif args.dataset == 'lsun_car':
         num_tmp_val = -10000
-    elif args.dataset == 'celeba':
-        num_tmp_val = -7000
     else:
         num_tmp_val = 0
     
     with torch.no_grad():
-        val_tot_tars = torch.zeros(len(val_dataset))
+        val_tot_tars = torch.tensor(val_dataset.targets)
         for cls_idx in range(len(args.att_to_use)):
             tmp_cls_set = (val_tot_tars == args.att_to_use[cls_idx]).nonzero()[num_tmp_val:]
             tmp_ds = torch.utils.data.Subset(val_dataset, tmp_cls_set)
@@ -82,13 +79,51 @@ def validateUN(data_loader, networks, epoch, args, additional=None):
                 else:
                     tmp_sample = torch.cat((tmp_sample, x_), 0)
             x_each_cls.append(tmp_sample)
+    '''
+    val_iter = iter(val_loader)
+    for l in tqdm(range(len(val_loader))):
+        x = next(val_iter)
+        x = x['data']
+        x = x[0]
+        x = x.cuda(args.gpu)
+
+        c_src = G_EMA.cnt_encoder(x)
+
+        x_ref = next(val_iter)
+        x_ref = x_ref['data']
+        x_ref = x_ref[0]
+        x_ref = x_ref.cuda(args.gpu)
+        s_ref = C(x_ref, sty=True)
+        s_ref_ema = C_EMA(x_ref, sty=True)
+
+        x_res = G_EMA.decode(c_src, s_ref)
+        x_res_ema = G_EMA.decode(c_src, s_ref_ema)
+
+        for i in range(x.size(0)):
+            result  = torch.stack((x[i], x_ref[i], x_res[i], x_res_ema[i]), dim=0)
+            if i == 0:
+                out  = result
+            else:
+                out = torch.cat((out, result), dim=0)
+
+
+        '''
+        vutils.save_image(x, os.path.join(args.res_dir, '{}_SRC_{}.jpg'.format(args.gpu, epoch+1)), normalize=True, nrow=1)
+        vutils.save_image(x_ref, os.path.join(args.res_dir, '{}_REF_{}.jpg'.format(args.gpu, epoch+1)), normalize=True)
+        vutils.save_image(x_res, os.path.join(args.res_dir, '{}_RES_{}.jpg'.format(args.gpu, epoch+1)), normalize=True)
+        vutils.save_image(x_res_ema, os.path.join(args.res_dir, '{}_RESEMA_{}.jpg'.format(args.gpu, epoch+1)), normalize=True)
+        '''
+        vutils.save_image(out, os.path.join(args.res_dir, 'gpu{}_RES_epoch{}_{}.jpg'.format(args.gpu, epoch+1, l)), nrow=4, normalize=True)
+
+        if l == 10:
+            break
     
+    '''
     #######
     if epoch >= args.fid_start:
         val_iter = iter(val_loader)
         cluster_grid = [[] for _ in range(args.output_k)]
         for _ in tqdm(range(len(val_loader))):
-            #x, y = next(val_iter)
             x = next(val_iter)
             x = x['data']
             x = x[0]
@@ -167,6 +202,7 @@ def validateUN(data_loader, networks, epoch, args, additional=None):
                                     nrow=(x_res_ema.size(0) // (x_src.size(0) + 2) + 1))
                     vutils.save_image(x_rnd_ema, os.path.join(args.res_dir, '{}_RNDEMA_{}_{}{}.jpg'.format(args.gpu, epoch+1, src_idx, ref_idx)), normalize=True,
                                     nrow=(x_res_ema.size(0) // (x_src.size(0) + 2) + 1))
+                    '''
 
 
 def calcFIDBatch(args, data_loader, networks, model='NONE', train_dataset=None):

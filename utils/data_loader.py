@@ -1,4 +1,5 @@
 import yaml
+import torch
 
 import utils.datasets as data_module
 from utils._utils import get_instance
@@ -22,7 +23,7 @@ class DuplicatedCompose(object):
         return img1, img2
 
 
-def get_all_data_loaders(config):
+def get_all_data_loaders(config, distributed=None):
     task = config['data']['task']
     if task == 'MUNIT':
         train_loader_a = get_munit_data_loader(config, True, 'A')
@@ -35,7 +36,7 @@ def get_all_data_loaders(config):
         train_loader, trainset = get_tunit_data_loader(config, train=True)
         _test_loader, valset = get_tunit_data_loader(config, train=False)
         test_loader = {'VAL': _test_loader, 'VALSET': valset, 'TRAINSET': trainset}
-        train_sampler = None
+        train_sampler = get_tunit_data_sampler(config, distributed=True)
 
         return train_loader, test_loader, train_sampler
 
@@ -129,9 +130,18 @@ def get_munit_data_loader(config, train, group, num_workers=4):
 
     return loader
 
+def get_tunit_data_sampler(config, distributed):
+    if not distributed:
+        return None
+    dataset = config['data']['dataset']
+    train = True
+    transform = get_duplicate_transform(config)
+    use_keypoints = config['data']['use_keypoints']
+    train_dataset = get_instance(data_module, config, 'data', 'dataset', train=train, transform=transform, use_keypoints=use_keypoints)
+    train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
+    return train_sampler
 
 def get_tunit_data_loader(config, train, num_workers=0): 
-    dataset = config['data']['dataset']
     batch_size = config['data']['batch_size']
     use_keypoints = config['data']['use_keypoints']
     transform = get_duplicate_transform(config)

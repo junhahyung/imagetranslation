@@ -76,8 +76,9 @@ def validateUN(data_loader, networks, epoch, args, additional=None):
             tmp_iter = iter(tmp_dl)
             tmp_sample = None
             for sample_idx in range(len(tmp_iter)):
-                imgs, _ = next(tmp_iter)
-                x_ = imgs[0]
+                x = next(tmp_iter)
+                x = x['data']
+                x_ = x[0]
                 if tmp_sample is None:
                     tmp_sample = x_.clone()
                 else:

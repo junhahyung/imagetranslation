@@ -42,7 +42,7 @@ from tensorboardX import SummaryWriter
 # Configuration
 parser = argparse.ArgumentParser(description='PyTorch GAN Training')
 parser.add_argument('--dataset', default='animal_faces', help='Dataset name to use',
-                    choices=['afhq_cat', 'afhq_dog', 'afhq_wild', 'animal_faces', 'photo2ukiyoe', 'summer2winter', 'lsun_car', 'ffhq'])
+                    choices=['afhq_cat', 'afhq_dog', 'afhq_wild', 'animal_faces', 'photo2ukiyoe', 'summer2winter', 'lsun_car', 'ffhq', 'celeba'])
 parser.add_argument('--data_path', type=str, default='../data',
                     help='Dataset directory. Please refer Dataset in README.md')
 parser.add_argument('--workers', default=4, type=int, help='the number of workers of data loader')
@@ -128,10 +128,16 @@ def main():
         args.ema_start = 36
         args.fid_start = 36
     elif args.train_mode in ['GAN_UNSUP']:
+        '''
         args.unsup_start = 0
         args.separated = 65
         args.ema_start = 66
         args.fid_start = 66
+        '''
+        args.unsup_start = 0
+        args.separated = 0
+        args.ema_start = 0
+        args.fid_start = 0
     elif args.train_mode in ['GAN_SUP']:
         args.unsup_start = 0
         args.separated = 0

@@ -128,7 +128,6 @@ def main():
         args.ema_start = 36
         args.fid_start = 36
     elif args.train_mode in ['GAN_UNSUP']:
-        '''
         args.unsup_start = 0
         args.separated = 65
         args.ema_start = 66
@@ -138,6 +137,7 @@ def main():
         args.separated = 0
         args.ema_start = 0
         args.fid_start = 0
+        '''
     elif args.train_mode in ['GAN_SUP']:
         args.unsup_start = 0
         args.separated = 0

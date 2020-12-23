@@ -28,7 +28,7 @@ from validation.cluster_eval import cluster_eval
 
 def validateUN(data_loader, networks, epoch, args, additional=None):
     # set nets
-    print('start validation func')
+    print('start validation func !')
     D = networks['D']
     G = networks['G'] if not args.distributed else networks['G'].module
     C = networks['C'] if not args.distributed else networks['C'].module

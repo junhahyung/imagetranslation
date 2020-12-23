@@ -36,7 +36,7 @@ def get_all_data_loaders(config, distributed=None):
         train_loader, trainset = get_tunit_data_loader(config, train=True)
         _test_loader, valset = get_tunit_data_loader(config, train=False)
         test_loader = {'VAL': _test_loader, 'VALSET': valset, 'TRAINSET': trainset}
-        train_sampler = get_tunit_data_sampler(config, distributed=True)
+        train_sampler = get_tunit_data_sampler(config, distributed=distributed)
 
         return train_loader, test_loader, train_sampler
 

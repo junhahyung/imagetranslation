@@ -3,13 +3,13 @@ TUNIT: Truly Unsupervised Image-to-Image Translation
 Copyright (c) 2020-present NAVER Corp.
 MIT license 
 """
+import sys
 import argparse
 import warnings
 from datetime import datetime
 from glob import glob
 from shutil import copyfile
 from collections import OrderedDict
-
 import torch.nn
 import torch.nn.parallel
 import torch.backends.cudnn as cudnn
@@ -37,14 +37,14 @@ from utils.data_loader import get_all_data_loaders
 #from datasets.datasetgetter import get_dataset
 from utils.ops_tunit import initialize_queue
 
-from tensorboardX import SummaryWriter
+#from tensorboardX import SummaryWriter
+#from torch.utils.tensorboard import SummaryWriter
+from tensorboardX import GlobalSummaryWriter as SummaryWriter
 
 # Configuration
 parser = argparse.ArgumentParser(description='PyTorch GAN Training')
 parser.add_argument('--dataset', default='animal_faces', help='Dataset name to use',
                     choices=['afhq_cat', 'afhq_dog', 'afhq_wild', 'animal_faces', 'photo2ukiyoe', 'summer2winter', 'lsun_car', 'ffhq', 'celeba'])
-parser.add_argument('--data_path', type=str, default='../data',
-                    help='Dataset directory. Please refer Dataset in README.md')
 parser.add_argument('--workers', default=4, type=int, help='the number of workers of data loader')
 
 parser.add_argument('--model_name', type=str, default='TUNIT',
@@ -101,7 +101,7 @@ def main():
     ####################
     args = parser.parse_args()
     print("PYTORCH VERSION", torch.__version__)
-    args.data_dir = args.data_path
+    #args.data_dir = args.data_path
     args.start_epoch = 0
     dataconfig = get_config(args.dataconfig)
 

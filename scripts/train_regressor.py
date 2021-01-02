@@ -70,7 +70,6 @@ def load_model_tunit(args, networks, opts):
 # model builder for tunit
 def build_model_tunit(args):
     args.to_train = 'CDGI'
-    #args.to_train = 'G'
 
     networks = {}
     opts = {}
@@ -109,9 +108,36 @@ def build_model_tunit(args):
 
     return networks, opts
 
+def plot_imgs(model, display_data, epoch):
+    metric = [getattr(module_metric, met) for met in config['metrics']][0]
+    data = display_data['data'].cuda().detach()
+    out = model(data)
+    pred = out[0]
+    #fig, axs = plt.subplots(2,5, constrained_layout=True, figsize=(30,30))
+    fig, axs = plt.subplots(2,5, figsize=(30,13))
+    #plt.subplots_adjust(top = 0.99, bottom=0.01, hspace=0, wspace=0.4)
+
+    for i in range(10):
+        img = display_data['data'][i].cpu().permute(1,2,0)
+        kp = display_data['meta']['keypts'][i]
+        kp_pred = pred[i].detach().cpu()
+        kp_pred = (kp_pred + 1) / 2 * 255
+        _out = (out[0][i,:,:], out[1][i,:,:])
+        _meta = {}
+        _meta['keypts_normalized'] = display_data['meta']['keypts_normalized'][i].unsqueeze(0)
+        ioe = metric(_out, _meta, config)
+        row = i // 5
+        col = i % 5
+        axs[row][col].imshow(img)
+        axs[row][col].scatter(kp[:,0], kp[:,1], color='red')
+        axs[row][col].scatter(kp_pred[:,0], kp_pred[:,1], color='blue')
+    plt.savefig('{}/{}_{}.png'.format(config_n.img_dir, str(epoch), ioe))
+
 def main():
     args = parser.parse_args()
 
+    global config
+    global config_n
     config = get_config(args.config)
 
 
@@ -119,9 +145,6 @@ def main():
     config_n.gpu = args.gpu
     config_n.distributed = False
     config_n.multiprocessing_distributed = False
-    #config_n.load_model = args.load_model
-    #config.model_name = '{}-{}_{}'.format(config.load_model, 'regressor', datetime.now().strftime("%Y%m%d-%H%M%S"))
-    #config_n.model_name = args.load_model
     config_n.model_name = args.model_name if args.model_name != None else config_n.model + '_regressor'
 
     print('model name: ', config_n.model_name)
@@ -134,6 +157,7 @@ def main():
     config_n.event_dir = os.path.join(config_n.log_dir, 'events')
     config_n.res_dir = os.path.join('./results', config_n.model_name)
     config_n.img_dir = os.path.join(config_n.res_dir, 'regressor_imgs')
+    config_n.eval_results = os.path.join(config_n.res_dir, 'eval_results.txt')
     makedirs(config_n.img_dir)
     config_n.img_dir = os.path.join(config_n.img_dir, config['data']['dataset'])
     makedirs(config_n.img_dir)
@@ -142,6 +166,7 @@ def main():
     config_n.regressor_log_dir = os.path.join(config_n.regressor_log_dir, config['data']['dataset'])
     makedirs(config_n.regressor_log_dir)
     
+
     cudnn.benchmark = True
 
     kp_regressor = get_instance(module_arch, config, 'keypoint_regressor', 'type', input_dim=config_n.keypoint_regressor['args']['input_channel'])
@@ -182,24 +207,7 @@ def main():
     train_loader, test_loader = get_all_data_loaders(config)
     display_data = list(test_loader)[0]
 
-    data = display_data['data'].cuda().detach()
-    out = model(data)
-    pred = out[0]
-    for i in range(10):
-        fig, axs = plt.subplots(1,2)
-        img = display_data['data'][i].cpu().permute(1,2,0)
-        kp = display_data['meta']['keypts'][i]
-        kp_pred = pred[i].detach().cpu()
-        kp_pred = (kp_pred + 1) / 2 * 255
-        _out = (out[0][i,:,:], out[1][i,:,:])
-        _meta = {}
-        _meta['keypts_normalized'] = display_data['meta']['keypts_normalized'][i].unsqueeze(0)
-        ioe = metric(_out, _meta, config)
-        axs[0].imshow(img)
-        axs[1].imshow(img)
-        axs[0].scatter(kp[:,0], kp[:,1])
-        axs[1].scatter(kp_pred[:,0], kp_pred[:,1])
-        plt.savefig('{}/{}_{}_{}.png'.format(config_n.img_dir, 'before_training', ioe, i+1))
+    plot_imgs(model, display_data, 'before_training')
 
     test_ioe = 0
     test_loss = 0
@@ -247,33 +255,16 @@ def main():
             test_loss /= (j+1)
             test_ioe /= (j+1)
 
-        print('--- epoch {} ---'.format(epoch+1))
-        print('train loss: {} / test loss: {}'.format(epoch_loss, test_loss))
-        print('train ioe: {} / test ioe: {}'.format(epoch_ioe, test_ioe))
-        print('learning rate: {}'.format(lr_scheduler.get_lr()[0]))
+        _eval_txt = '--- epoch {} ---\n'.format(epoch+1) + 'train loss: {} / test loss: {}\n'.format(epoch_loss, test_loss) + 'train ioe: {} / test ioe: {}\n'.format(epoch_ioe, test_ioe) + 'learning rate: {}\n'.format(lr_scheduler.get_lr()[0])
+        print(_eval_txt)
+        with open(config_n.eval_results, 'a') as eval_txt:
+            eval_txt.write(_eval_txt)
 
         lr_scheduler.step()
 
-        if (epoch+1) % 10 == 0:
+        if (epoch+1) % 1 == 0:
             # save image
-            data = display_data['data'].cuda().detach()
-            out = model(data)
-            pred = out[0]
-            for i in range(10):
-                fig, axs = plt.subplots(1,2)
-                img = display_data['data'][i].cpu().permute(1,2,0)
-                kp = display_data['meta']['keypts'][i]
-                kp_pred = pred[i].detach().cpu()
-                kp_pred = (kp_pred + 1) / 2 * 255
-                _out = (out[0][i,:,:], out[1][i,:,:])
-                _meta = {}
-                _meta['keypts_normalized'] = display_data['meta']['keypts_normalized'][i].unsqueeze(0)
-                ioe = metric(_out, _meta, config)
-                axs[0].imshow(img)
-                axs[1].imshow(img)
-                axs[0].scatter(kp[:,0], kp[:,1])
-                axs[1].scatter(kp_pred[:,0], kp_pred[:,1])
-                plt.savefig('{}/{}_{}_{}.png'.format(config_n.img_dir, epoch+1, ioe, i+1))
+            plot_imgs(model, display_data, epoch)
 
             # save model
 
@@ -281,73 +272,4 @@ def main():
             torch.save(model.state_dict(), save_path)
         
 
-
-
-
-
-
 main()
-
-'''
-model_name = os.path.splitext(os.path.basename(opts.config))[0]
-train_writer = tensorboardX.SummaryWriter(os.path.join(opts.output_path + "/logs", model_name))
-output_directory = os.path.join(opts.output_path + "/outputs", model_name)
-checkpoint_directory, image_directory = prepare_sub_folder(output_directory)
-
-
-# data loader
-train_loader, test_loader = get_all_data_loaders(config)
-
-lt = RegressorTrainer(config)
-lt.cuda()
-
-print("learning rate : ", lt.scheduler.get_lr()[0])
-# initial mse
-test_mse = 0
-with torch.no_grad():
-    for j, data in enumerate(test_loader):
-        img, lm = data['data'].cuda().detach(), data['meta']['keypts_normalized'].cuda().detach()
-        normed_mse = lt(img, lm)
-        test_mse += normed_mse
-    test_mse /= (j+1)
-    print("initial test mse : ", float(test_mse))
-
-while True:
-    total_iter = 0
-    for i, data in enumerate(train_loader):
-        total_iter += 1
-        lt.update_learning_rate()
-        img, lm = data['data'].cuda().detach(), data['meta']['keypts_normalized'].cuda().detach()
-        normed_mse, lmk = lt.fit(img, lm)
-
-        if (i+1) % 100 == 0:
-            normed_mse = float(normed_mse)
-            print("----iteration {}----".format(i))
-            print("learning rate : ", lt.scheduler.get_lr()[0])
-            print("train_mse", normed_mse)
-            train_writer.add_scalar('data/train_normed_mse', normed_mse, i)
-
-            with torch.no_grad():
-                test_mse = 0
-                for j, data in enumerate(test_loader):
-                    img, lm = data['data'].cuda().detach(), data['meta']['keypts_normalized'].cuda().detach()
-                    normed_mse = lt(img, lm)
-                    test_mse += normed_mse
-                test_mse /= (j+1)
-                print("test mse : ", float(test_mse))
-                print("----------------")
-
-            train_writer.add_scalar('data/test_normed_mse', test_mse, i)
-            lt.save(checkpoint_directory, i)
-
-    if total_iter > 100000:
-        with torch.no_grad():
-            test_mse = 0
-            for j, data in enumerate(test_loader):
-                img, lm = data['data'].cuda().detach(), data['meta']['keypts_normalized'].cuda().detach()
-                normed_mse = lt(img, lm)
-                test_mse += normed_mse
-            test_mse /= (j+1)
-            print("final test mse : ", float(test_mse))
-        sys.exit('Finish training')
-'''

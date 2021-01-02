@@ -299,8 +299,10 @@ def main_worker(gpu, ngpus_per_node, args, dataconfig):
 
     for epoch in range(args.start_epoch, args.epochs):
         print("START EPOCH[{}]".format(epoch+1))
-        if (epoch + 1) % (args.epochs // 10) == 0:
+        '''
+        if (epoch + 1) % (args.epochs // 2) == 0:
             save_model(args, epoch, networks, opts)
+        '''
 
         if args.distributed:
             if 0.0 < args.p_semi < 1.0:
@@ -335,7 +337,7 @@ def main_worker(gpu, ngpus_per_node, args, dataconfig):
 
         # Write logs
         if not args.multiprocessing_distributed or (args.multiprocessing_distributed and args.rank % args.ngpus_per_node == 0):
-            if (epoch + 1) % 10 == 0:
+            if (epoch + 1) % 2 == 0:
                 save_model(args, epoch, networks, opts)
             '''
             if not args.train_mode in ['CLS_UN', 'CLS_SEMI']:

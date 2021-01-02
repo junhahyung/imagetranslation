@@ -1,6 +1,31 @@
 # Copyright (C) 2017 NVIDIA Corporation.  All rights reserved.
 # Licensed under the CC BY-NC-SA 4.0 license (https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode).
 
+model: MUNIT
+loss: regression_loss
+metrics: [inter_ocular_error]
+epoch: 300
+keypoint_regressor:
+    type: IntermediateKeypointPredictor
+    args:
+        input_channel: 256 
+        num_annotated_points: 5
+        num_intermediate_points: 50
+        softargmax_mul: 100
+
+optimizer:
+    type: Adam
+    args:
+        lr: 0.0001
+        weight_decay: 0.0005
+        amsgrad: true
+
+lr_scheduler:
+    type: MultiStepLR
+    args:
+        milestones: [100, 250]
+        gamma: 0.1
+
 # logger options
 image_save_iter: 10000        # How often do you want to save output images during training
 image_display_iter: 500       # How often do you want to display output images during training
@@ -24,7 +49,8 @@ recon_s_w: 1                  # weight of style reconstruction loss
 recon_c_w: 1                  # weight of content reconstruction loss
 recon_x_cyc_w: 0              # weight of explicit style augmented cycle consistency loss
 vgg_w: 0                      # weight of domain-invariant perceptual loss
-input_dim: 3
+input_dim: 3 # input dimension channel
+
 
 # model options
 gen:
@@ -38,8 +64,8 @@ gen:
 
 data:
     dataset: MAFLAligned
-    task: None # for which task data is served (Munit, None, ...)
-    root: /home/nas1_userE/ULD_dataset/celeba
+    task: Munit # for which task data is served (Munit, None, ...)
+    root: /home/junhahyung/unsuplandmark/data/celeba 
     use_keypoints: True # return keypoints in dataloader, True or False
     batch_size: 32
     default_h: 218 # default height

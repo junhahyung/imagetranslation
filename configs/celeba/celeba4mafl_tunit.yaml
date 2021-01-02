@@ -42,7 +42,7 @@ dis:
 data:
     dataset: CelebAAligned4MAFLVal
     task: TUNIT # for which task data is served (Munit, None, ...)
-    root: /home/nas_datasets/ULD_dataset/celeba
+    root: /home/junhahyung/unsuplandmark/data/celeba/
     use_keypoints: False # return keypoints in dataloader, True or False
     batch_size: 16 
     default_h: 218 # default height

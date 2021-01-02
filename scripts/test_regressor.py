@@ -34,6 +34,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--config', type=str, default='configs/mafl/mafl_regressor_tunit.yaml', help='Path to the config file.')
 parser.add_argument('--model_name', default=None, type=str, metavar='PATH')
 parser.add_argument('--gpu', default=0, type=int, help='GPU id to use')
+parser.add_argument('--ckpt', type=str, help='which checkpoint to use', required=True)
 
 # tunit model loader
 def load_model_tunit(args, networks, opts):
@@ -119,46 +120,25 @@ def main():
     config_n.gpu = args.gpu
     config_n.distributed = False
     config_n.multiprocessing_distributed = False
-    #config_n.load_model = args.load_model
-    #config.model_name = '{}-{}_{}'.format(config.load_model, 'regressor', datetime.now().strftime("%Y%m%d-%H%M%S"))
-    #config_n.model_name = args.load_model
-    config_n.model_name = args.model_name if args.model_name != None else config_n.model + '_regressor'
+    #config_n.model_name = args.model_name if args.model_name != None else config_n.model + '_regressor'
 
-    print('model name: ', config_n.model_name)
-
-    makedirs('./logs')
-    makedirs('./results')
-    
-    config_n.log_dir = os.path.join('./logs', config_n.model_name)
-    makedirs(config_n.log_dir)
-    config_n.event_dir = os.path.join(config_n.log_dir, 'events')
-    config_n.res_dir = os.path.join('./results', config_n.model_name)
-    config_n.img_dir = os.path.join(config_n.res_dir, 'regressor_imgs')
-    makedirs(config_n.img_dir)
-    config_n.img_dir = os.path.join(config_n.img_dir, config['data']['dataset'])
-    makedirs(config_n.img_dir)
-    config_n.regressor_log_dir = os.path.join(config_n.log_dir, 'regressor_logs')
-    makedirs(config_n.regressor_log_dir)
-    config_n.regressor_log_dir = os.path.join(config_n.regressor_log_dir, config['data']['dataset'])
-    makedirs(config_n.regressor_log_dir)
-    
     cudnn.benchmark = True
 
     kp_regressor = get_instance(module_arch, config, 'keypoint_regressor', 'type', input_dim=config_n.keypoint_regressor['args']['input_channel'])
 
     if config_n.model == 'TUNIT':
         networks, opts = build_model_tunit(config_n)
-        load_model_tunit(config_n, networks, opts)
+        #load_model_tunit(config_n, networks, opts)
         for key in networks.keys():
             networks[key].eval()
         encoder = networks['G'].cnt_encoder
 
     elif config_n.model == 'MUNIT':
         encoder = AdaINGen(config['input_dim'], config['gen'])
-        last_model_name = get_model_list(config["checkpoint_dir"], 'gen')
-        state_dict = torch.load(last_model_name)
-        e_domain = config['encoder_domain']
-        encoder.load_state_dict(state_dict[e_domain])
+        #last_model_name = get_model_list(config["checkpoint_dir"], 'gen')
+        #state_dict = torch.load(last_model_name)
+        #e_domain = config['encoder_domain']
+        #encoder.load_state_dict(state_dict[e_domain])
         encoder = encoder.enc_content
         encoder.eval()
 
@@ -169,37 +149,14 @@ def main():
     model = nn.Sequential(encoder, kp_regressor)
     model = model.cuda()
 
+    state_dict = torch.load(args.ckpt)
+    model.load_state_dict(state_dict)
+    print("checkpoint from ", args.ckpt)
+
     Loss = getattr(module_loss, config_n.loss)
     metric = [getattr(module_metric, met) for met in config['metrics']][0]
 
-    #all_params = list(model.parameters())
-    trainable_params = list(filter(lambda p: p.requires_grad, kp_regressor.parameters()))
-
-    optimizer = getattr(torch.optim, config['optimizer']['type'])(trainable_params, **config['optimizer']['args'])
-    lr_scheduler = getattr(torch.optim.lr_scheduler, config['lr_scheduler']['type'])(optimizer, **config['lr_scheduler']['args'])
-
-
-    train_loader, test_loader = get_all_data_loaders(config)
-    display_data = list(test_loader)[0]
-
-    data = display_data['data'].cuda().detach()
-    out = model(data)
-    pred = out[0]
-    for i in range(10):
-        fig, axs = plt.subplots(1,2)
-        img = display_data['data'][i].cpu().permute(1,2,0)
-        kp = display_data['meta']['keypts'][i]
-        kp_pred = pred[i].detach().cpu()
-        kp_pred = (kp_pred + 1) / 2 * 255
-        _out = (out[0][i,:,:], out[1][i,:,:])
-        _meta = {}
-        _meta['keypts_normalized'] = display_data['meta']['keypts_normalized'][i].unsqueeze(0)
-        ioe = metric(_out, _meta, config)
-        axs[0].imshow(img)
-        axs[1].imshow(img)
-        axs[0].scatter(kp[:,0], kp[:,1])
-        axs[1].scatter(kp_pred[:,0], kp_pred[:,1])
-        plt.savefig('{}/{}_{}_{}.png'.format(config_n.img_dir, 'before_training', ioe, i+1))
+    _ , test_loader = get_all_data_loaders(config)
 
     test_ioe = 0
     test_loss = 0
@@ -214,76 +171,8 @@ def main():
         test_loss /= (j+1)
         test_ioe /= (j+1)
 
-
-
-    for epoch in range(config['epoch']):
-        print('%%%% start epoch {} %%%%'.format(epoch+1))
-        epoch_loss = 0
-        epoch_ioe = 0
-        for batch_idx, data in enumerate(tqdm(train_loader)):
-            optimizer.zero_grad()
-            img, meta = data['data'].cuda().detach(), data['meta']
-            out = model(img)
-            loss = Loss(out, meta)
-            ioe = metric(out, meta, config)
-            epoch_ioe += ioe
-            epoch_loss += loss
-
-            loss.backward()
-            optimizer.step()
-        epoch_loss /= (batch_idx + 1)
-        epoch_ioe /= (batch_idx + 1)
-
-        test_ioe = 0
-        test_loss = 0
-        with torch.no_grad():
-            for j, data in enumerate(test_loader):
-                img, meta = data['data'].cuda().detach(), data['meta']
-                out = model(img)
-                loss = Loss(out, meta)
-                ioe = metric(out, meta, config)
-                test_loss += loss
-                test_ioe += ioe
-            test_loss /= (j+1)
-            test_ioe /= (j+1)
-
-        print('--- epoch {} ---'.format(epoch+1))
-        print('train loss: {} / test loss: {}'.format(epoch_loss, test_loss))
-        print('train ioe: {} / test ioe: {}'.format(epoch_ioe, test_ioe))
-        print('learning rate: {}'.format(lr_scheduler.get_lr()[0]))
-
-        lr_scheduler.step()
-
-        if (epoch+1) % 10 == 0:
-            # save image
-            data = display_data['data'].cuda().detach()
-            out = model(data)
-            pred = out[0]
-            for i in range(10):
-                fig, axs = plt.subplots(1,2)
-                img = display_data['data'][i].cpu().permute(1,2,0)
-                kp = display_data['meta']['keypts'][i]
-                kp_pred = pred[i].detach().cpu()
-                kp_pred = (kp_pred + 1) / 2 * 255
-                _out = (out[0][i,:,:], out[1][i,:,:])
-                _meta = {}
-                _meta['keypts_normalized'] = display_data['meta']['keypts_normalized'][i].unsqueeze(0)
-                ioe = metric(_out, _meta, config)
-                axs[0].imshow(img)
-                axs[1].imshow(img)
-                axs[0].scatter(kp[:,0], kp[:,1])
-                axs[1].scatter(kp_pred[:,0], kp_pred[:,1])
-                plt.savefig('{}/{}_{}_{}.png'.format(config_n.img_dir, epoch+1, ioe, i+1))
-
-            # save model
-
-            save_path = '{}/model_{}.ckpt'.format(config_n.regressor_log_dir, epoch+1)
-            torch.save(model.state_dict(), save_path)
-        
-
-
-
-
+        print('test loss: {}'.format(test_loss))
+        print('test ioe: {}'.format(test_ioe))
 
 
 main()

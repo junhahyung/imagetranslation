@@ -92,7 +92,7 @@ def get_duplicate_transform(config):
     return transform
 
 
-def get_default_data_loader(config, train, num_workers=0): 
+def get_default_data_loader(config, train, num_workers=4): 
     dataset = config['data']['dataset']
     batch_size = config['data']['batch_size']
     use_keypoints = config['data']['use_keypoints']
@@ -141,7 +141,7 @@ def get_tunit_data_sampler(config, distributed):
     train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
     return train_sampler
 
-def get_tunit_data_loader(config, train, num_workers=0): 
+def get_tunit_data_loader(config, train, num_workers=8): 
     batch_size = config['data']['batch_size']
     use_keypoints = config['data']['use_keypoints']
     transform = get_duplicate_transform(config)

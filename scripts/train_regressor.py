@@ -109,32 +109,36 @@ def build_model_tunit(args):
     return networks, opts
 
 def plot_imgs(model, display_data, epoch):
-    metric = [getattr(module_metric, met) for met in config['metrics']][0]
-    data = display_data['data'].cuda().detach()
-    out = model(data)
-    pred = out[0]
-    #fig, axs = plt.subplots(2,5, constrained_layout=True, figsize=(30,30))
-    fig, axs = plt.subplots(2,5, figsize=(30,13))
-    #plt.subplots_adjust(top = 0.99, bottom=0.01, hspace=0, wspace=0.4)
+    with torch.no_grad():
+        metric = [getattr(module_metric, met) for met in config['metrics']][0]
+        data = display_data['data'].cuda().detach()
+        out = model(data)
+        pred = out[0]
+        #fig, axs = plt.subplots(2,5, constrained_layout=True, figsize=(30,30))
+        fig, axs = plt.subplots(2,5, figsize=(30,13))
+        #plt.subplots_adjust(top = 0.99, bottom=0.01, hspace=0, wspace=0.4)
 
-    for i in range(10):
-        img = display_data['data'][i].cpu().permute(1,2,0)
-        kp = display_data['meta']['keypts'][i]
-        kp_pred = pred[i].detach().cpu()
-        kp_pred = (kp_pred + 1) / 2 * 255
-        _out = (out[0][i,:,:], out[1][i,:,:])
-        _meta = {}
-        _meta['keypts_normalized'] = display_data['meta']['keypts_normalized'][i].unsqueeze(0)
-        ioe = metric(_out, _meta, config)
-        row = i // 5
-        col = i % 5
-        axs[row][col].imshow(img)
-        axs[row][col].scatter(kp[:,0], kp[:,1], color='red')
-        axs[row][col].scatter(kp_pred[:,0], kp_pred[:,1], color='blue')
-    plt.savefig('{}/{}_{}.png'.format(config_n.img_dir, str(epoch), ioe))
+        for i in range(10):
+            img = display_data['data'][i].cpu().permute(1,2,0)
+            kp = display_data['meta']['keypts'][i]
+            kp_pred = pred[i].detach().cpu()
+            kp_pred = (kp_pred + 1) / 2 * 255
+            _out = (out[0][i,:,:], out[1][i,:,:])
+            _meta = {}
+            _meta['keypts_normalized'] = display_data['meta']['keypts_normalized'][i].unsqueeze(0)
+            ioe = metric(_out, _meta, config)
+            row = i // 5
+            col = i % 5
+            axs[row][col].imshow(img)
+            axs[row][col].scatter(kp[:,0], kp[:,1], color='red')
+            axs[row][col].scatter(kp_pred[:,0], kp_pred[:,1], color='blue')
+        plt.savefig('{}/{}_{}.png'.format(config_n.img_dir, str(epoch), ioe))
 
 def main():
     args = parser.parse_args()
+    if args.gpu is not None:
+        torch.cuda.set_device(args.gpu)
+        print('[use gpu] ',args.gpu)
 
     global config
     global config_n
@@ -153,19 +157,13 @@ def main():
     makedirs('./results')
     
     config_n.log_dir = os.path.join('./logs', config_n.model_name)
-    makedirs(config_n.log_dir)
-    config_n.event_dir = os.path.join(config_n.log_dir, 'events')
-    config_n.res_dir = os.path.join('./results', config_n.model_name)
+    config_n.regressor_log_dir = os.path.join(config_n.log_dir, 'regressor_logs', config['data']['dataset'])
+    makedirs(config_n.regressor_log_dir)
+
+    config_n.res_dir = os.path.join('./results', config_n.model_name, config['data']['dataset'])
     config_n.img_dir = os.path.join(config_n.res_dir, 'regressor_imgs')
     config_n.eval_results = os.path.join(config_n.res_dir, 'eval_results.txt')
     makedirs(config_n.img_dir)
-    config_n.img_dir = os.path.join(config_n.img_dir, config['data']['dataset'])
-    makedirs(config_n.img_dir)
-    config_n.regressor_log_dir = os.path.join(config_n.log_dir, 'regressor_logs')
-    makedirs(config_n.regressor_log_dir)
-    config_n.regressor_log_dir = os.path.join(config_n.regressor_log_dir, config['data']['dataset'])
-    makedirs(config_n.regressor_log_dir)
-    
 
     cudnn.benchmark = True
 
@@ -262,9 +260,9 @@ def main():
 
         lr_scheduler.step()
 
-        if (epoch+1) % 1 == 0:
+        if (epoch+1) % 10 == 0:
             # save image
-            plot_imgs(model, display_data, epoch)
+            plot_imgs(model, display_data, epoch+1)
 
             # save model
 

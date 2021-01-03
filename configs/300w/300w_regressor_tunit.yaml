@@ -18,7 +18,7 @@ keypoint_regressor:
 optimizer:
     type: Adam
     args:
-        lr: 0.001
+        lr: 0.0005
         weight_decay: 0.0005
         amsgrad: true
 
@@ -31,9 +31,8 @@ lr_scheduler:
 data:
     dataset: ThreeHundredW
     task: None # for which task data is served (Munit, None, ...)
-    root: /home/junhahyung/unsuplandmark/data/300w/300w
+    root: /home/nas1_userE/ULD_dataset/300w/300w
     use_keypoints: True # return keypoints in dataloader, True or False
     batch_size: 32
-    val_size: 2000
     imwidth: 256
     crop: 0

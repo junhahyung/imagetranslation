@@ -2,6 +2,7 @@ import yaml
 import torch
 
 import utils.datasets as data_module
+from utils.datasets import JPEGNoise, PcaAug
 from utils._utils import get_instance
 #from utils import datasets as data_module
 from torch.utils.data import DataLoader
@@ -51,9 +52,21 @@ def get_transform(config):
     if not 'transform' in config['data']:
         return None
     tconf = config['data']['transform']
-    transform_list = [transforms.ToTensor(),
-                      transforms.Normalize((0.5, 0.5, 0.5), 
-                                            (0.5, 0.5, 0.5))]
+
+    if config['data']['dataset'] == 'AFLW':
+        normalize = transforms.Normalize(mean=[0.5084, 0.4224, 0.3769], std=[0.2599, 0.2371, 0.2323])
+    else:
+        normalize = transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    if 'do_augmentation' in tconf.keys() and tconf['do_augmentation'] == True:
+        augmentations = [
+                JPEGNoise(),
+                transforms.transforms.ColorJitter(.4, .4, .4),
+                transforms.ToTensor(),
+                PcaAug()]
+    else:
+        augmentations = [transforms.ToTensor()]
+
+    transform_list = augmentations + [normalize]
     #TODO
     #add random crop
 

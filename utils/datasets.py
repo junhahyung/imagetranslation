@@ -11,37 +11,41 @@ from utils._utils import pad_and_crop
 
 from io import BytesIO
 from PIL import Image
+from scipy.io import loadmat
 from torchvision import transforms
 from torch.utils.data.dataset import Dataset
 
 
-def align_keypoints(kp, config):
-    default_h = config['data']['default_h']
-    default_w = config['data']['default_w']
-    current_h = default_h
-    current_w = default_w
-
-    # Resize
+def align_keypoints(kp, config, is_aflw):
     transform = config['data']['transform']
-    if 'Resize' in transform.keys():
-        if transform['Resize']:
-            new_size = transform['Resize']
-            height, width = new_size, new_size
+    if is_aflw:
+        current_h = current_w = transform['Resize']
+    else:
+        default_h = config['data']['default_h']
+        default_w = config['data']['default_w']
+        current_h = default_h
+        current_w = default_w
 
-            default = min(default_h, default_w)
-            if default == default_h:
-                scale = height / float(default_h)
-            else:
-                scale = width / float(default_w)
+        # Resize
+        if 'Resize' in transform.keys():
+            if transform['Resize']:
+                new_size = transform['Resize']
+                height, width = new_size, new_size
 
-            '''
-            kp[:,0] = kp[:,0] * scale
-            kp[:,1] = kp[:,1] * scale
-            '''
-            kp = kp * scale
+                default = min(default_h, default_w)
+                if default == default_h:
+                    scale = height / float(default_h)
+                else:
+                    scale = width / float(default_w)
 
-            current_h *= scale
-            current_w *= scale
+                '''
+                kp[:,0] = kp[:,0] * scale
+                kp[:,1] = kp[:,1] * scale
+                '''
+                kp = kp * scale
+
+                current_h *= scale
+                current_w *= scale
 
     if 'CenterCrop' in transform.keys():
         if transform['CenterCrop']:
@@ -116,14 +120,17 @@ class CelebABase(Dataset):
         meta = {}
         if self.use_keypoints:
             kp = self.keypoints[index].copy()
-            H, W, kp = align_keypoints(kp, self.config)
+            H, W, kp = align_keypoints(kp, self.config, self.AFLW)
             kp = torch.tensor(kp)
+            _dir = os.path.join(self.subdir, self.filenames[index])
             meta = {
                 'keypts': kp,
                 'keypts_normalized': kp_normalize(H, W, kp),
+                #'keypts_origin': self.keypoints_origin[index].copy(),
                 'index': index
+                #'dir': _dir
             }
-        img = self.default_imgloader(os.path.join(self.subdir, self.filenames[index]))
+        img = self.default_imgloader(_dir)
 
         if self.transform is not None:
             img = self.transform(img)
@@ -145,6 +152,7 @@ class CelebAAligned4MAFLVal(CelebABase):
         self.val_split = config['data']['val_split']
         self.val_size = config['data']['val_size']
         self.use_keypoints = use_keypoints
+        self.AFLW = False
 
         if self.use_hq_ims:
             subdir = "img_align_celeba_hq"
@@ -190,6 +198,7 @@ class CelebAAligned4MAFLVal_MUNIT(CelebABase):
         self.val_size = config['data']['val_size']
         self.use_keypoints = use_keypoints
         self.imlist = flist_reader(flist)
+        self.AFLW = False
 
         if self.use_hq_ims:
             subdir = "img_align_celeba_hq"
@@ -221,6 +230,59 @@ class CelebAAligned4MAFLVal_MUNIT(CelebABase):
         self.keypoints = np.array(self.data, dtype=np.float).reshape(-1,5,2)
         self.filenames = list(self.data.index)
 
+
+class AFLW(CelebABase):
+    eye_kp_idxs = [0, 1]
+
+    def __init__(self, config, train=True, transform=None, use_keypoints=True):
+        self.config = config
+        self.root = config['data']['root']
+        self.use_keypoints = use_keypoints
+        self.train = train
+        self.imwidth = config['data']['transform']['Resize']
+        self.transform = transform
+        self.AFLW = True
+
+        images, keypoints, sizes = self.load_dataset(self.root)
+        self.sizes = sizes
+        self.filenames = images
+        self.keypoints = keypoints.astype(np.float32)
+        #self.keypoints_origin = np.copy(self.keypoints).reshape(-1,5,2)
+        self.subdir = os.path.join(self.root, 'output')
+
+        # print("LIMITING DATA FOR DEBGGING")
+        # self.filenames = self.filenames[:1000]
+        # self.keypoints = self.keypoints[:1000]
+        # sizes = sizes[:1000]
+        # self.sizes = sizes
+
+        # check raw
+        # im_path = pjoin(self.subdir, self.filenames[0])
+        # im = Image.open(im_path).convert("RGB")
+        # plt.imshow(im)
+        # plt.scatter(keypoints[0, :, 0], keypoints[0, :, 1])
+        self.keypoints *= self.imwidth / sizes[:, [1, 0]].reshape(-1, 1, 2)
+
+
+    def load_dataset(self, data_dir):
+        # borrowed from Tom and Ankush
+        if self.train:
+            load_subset = "train"
+        else:
+            load_subset = "test"
+        with open(os.path.join(data_dir, 'aflw_{}_images.txt'.format(load_subset)), 'r') as f:
+            images = f.read().splitlines()
+        mat = loadmat(os.path.join(data_dir, 'aflw_' + load_subset + '_keypoints.mat'))
+        keypoints = mat['gt'][:, :, [1, 0]]
+        sizes = mat['hw']
+
+        # import ipdb; ipdb.set_trace()
+        # if self.data.shape[0] == 19000:
+        #     self.data = self.data[:20]
+
+        return images, keypoints, sizes
+
+
 class MAFLAligned(CelebABase):
     eye_kp_idxs = [0, 1]
     def __init__(self, config, train=True, transform=None, use_keypoints=True):
@@ -230,6 +292,7 @@ class MAFLAligned(CelebABase):
         self.transform = transform
         self.use_hq_ims = config['data']['use_hq_ims']
         self.use_keypoints = use_keypoints
+        self.AFLW = False
     
         if self.use_hq_ims:
             subdir = "img_align_celeba_hq"
@@ -386,9 +449,9 @@ class ThreeHundredW(Dataset):
 
 
 if __name__ == '__main__':
-    with open('configs/celeba/celeba4mafl_tunit.yaml', 'r') as stream:
+    with open('configs/aflw/aflw_regressor_tunit.yaml', 'r') as stream:
         config = yaml.load(stream)
 
-    w = CelebAAligned4MAFLVal(config)
+    w = AFLW(config)
     #print(torch.tensor(w['data']).shape)
     print(len(w))

@@ -16,15 +16,15 @@ keypoint_regressor:
 optimizer:
     type: Adam
     args:
-        lr: 0.0001
+        lr: 0.0005
         weight_decay: 0.0005
         amsgrad: true
 
 lr_scheduler:
     type: MultiStepLR
     args:
-        milestones: [100, 250]
-        gamma: 0.1
+        milestones: [50,100, 150,200,250]
+        gamma: 0.3
 
 # logger options
 image_save_iter: 10000        # How often do you want to save output images during training

@@ -25,8 +25,8 @@ optimizer:
 lr_scheduler:
     type: MultiStepLR
     args:
-        milestones: [100, 250]
-        gamma: 0.1
+        milestones: [50, 100,150, 200, 250]
+        gamma: 0.3
 
 data:
     dataset: MAFLAligned

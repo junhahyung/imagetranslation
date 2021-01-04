@@ -440,7 +440,7 @@ class ThreeHundredW(Dataset):
         
         if kp is not None:
             kp = kp - self.crop
-            kp = torch.tensor(kp)
+            #kp = torch.tensor(kp)
 
         if self.use_keypoints:
             meta = {'keypts': kp, 'keypts_normalized': kp_normalize(H, W, kp), 'index': index}

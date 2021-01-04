@@ -1,14 +1,12 @@
-# Copyright (C) 2017 NVIDIA Corporation.  All rights reserved.
-# Licensed under the CC BY-NC-SA 4.0 license (https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode).
-
 model: MUNIT
 loss: regression_loss
 metrics: [inter_ocular_error]
 epoch: 300
+
 keypoint_regressor:
     type: IntermediateKeypointPredictor
     args:
-        input_channel: 256 
+        input_channel: 256
         num_annotated_points: 5
         num_intermediate_points: 50
         softargmax_mul: 100
@@ -23,7 +21,7 @@ optimizer:
 lr_scheduler:
     type: MultiStepLR
     args:
-        milestones: [50,100, 150,200,250]
+        milestones: [50, 100, 150, 200, 250]
         gamma: 0.3
 
 # logger options
@@ -62,21 +60,16 @@ gen:
   n_res: 4                    # number of residual blocks in content encoder/decoder
   pad_type: reflect           # padding type [zero/reflect]
 
+
 data:
-    dataset: MAFLAligned
-    task: Munit # for which task data is served (Munit, None, ...)
-    root: /home/junhahyung/unsuplandmark/data/celeba 
+    dataset: AFLW
+    task: None # for which task data is served (Munit, None, ...)
+    root: /home/junhahyung/unsuplandmark/data/aflw/aflw_release-2
     use_keypoints: True # return keypoints in dataloader, True or False
     batch_size: 32
-    default_h: 218 # default height
-    default_w: 178 # default width
-    use_hq_ims: True
-    val_split: celeba
-    val_size: 2000
     transform: 
         CenterCrop: [256, 256]  # [h, w] or scalar
         Resize: 256 # scalar
 
-# MUNIT checkpoint directory
 checkpoint_dir: ./outputs/celeba4mafl_munit/checkpoints
 encoder_domain: a

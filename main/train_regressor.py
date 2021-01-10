@@ -27,6 +27,10 @@ from models.tunit.guidingNet import GuidingNet
 from models.tunit.inception import InceptionV3
 import models.loss as module_loss
 
+## STARGAN-V2 ###
+from models.stargan_v2.model import Generator as S_Generator
+from models.stargan_v2.model import Stargan_enc
+
 import matplotlib.pyplot as plt
 from PIL import Image
 
@@ -34,6 +38,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--config', type=str, default='configs/mafl/mafl_regressor_tunit.yaml', help='Path to the config file.')
 parser.add_argument('--model_name', default=None, type=str, metavar='PATH')
 parser.add_argument('--gpu', default=0, type=int, help='GPU id to use')
+parser.add_argument('--from_scratch', default=False, type=bool, help='train whole model from scratch')
+parser.add_argument('--save_name', default=None, type=str, help='save folder name')
 
 # tunit model loader
 def load_model_tunit(args, networks, opts):
@@ -66,6 +72,23 @@ def load_model_tunit(args, networks, opts):
               .format(load_file, checkpoint['epoch']))
     else:
         print("=> no checkpoint found at '{}'".format(args.log_dir))
+
+def build_encoder_stargan_v2(args):
+    stargan_gen = S_Generator()
+    if not args.from_scratch:
+        check_load = open(os.path.join(args.log_dir, "checkpoint.txt"), 'r')
+        to_restore = check_load.readlines()[-1].strip()
+        load_file = os.path.join(args.log_dir, to_restore)
+        if os.path.isfile(load_file):
+            print("=> loading checkpoint '{}'".format(load_file))
+            checkpoint = torch.load(load_file, map_location='cpu')
+            stargan_gen.load_state_dict(checkpoint['generator'])
+        else:
+            return None
+    encoder = Stargan_enc(stargan_gen)
+    return encoder
+
+
 
 # model builder for tunit
 def build_model_tunit(args):
@@ -140,6 +163,9 @@ def main():
         torch.cuda.set_device(args.gpu)
         print('[use gpu] ',args.gpu)
 
+    if args.from_scratch:
+        print('train from scratch')
+
     global config
     global config_n
     config = get_config(args.config)
@@ -157,10 +183,10 @@ def main():
     makedirs('./results')
     
     config_n.log_dir = os.path.join('./logs', config_n.model_name)
-    config_n.regressor_log_dir = os.path.join(config_n.log_dir, 'regressor_logs', config['data']['dataset'])
+    config_n.regressor_log_dir = os.path.join(config_n.log_dir, 'regressor_logs', config['data']['dataset']) if args.save_name == None else os.path.join('./logs', args.save_name, 'regressor_logs', config['data']['dataset'])
     makedirs(config_n.regressor_log_dir)
 
-    config_n.res_dir = os.path.join('./results', config_n.model_name, config['data']['dataset'])
+    config_n.res_dir = os.path.join('./results', config_n.model_name, config['data']['dataset']) if args.save_name == None else os.path.join('./resutls', args.save_name, config['data']['dataset'])
     config_n.img_dir = os.path.join(config_n.res_dir, 'regressor_imgs')
     config_n.eval_results = os.path.join(config_n.res_dir, 'eval_results.txt')
     makedirs(config_n.img_dir)
@@ -171,24 +197,29 @@ def main():
 
     if config_n.model == 'TUNIT':
         networks, opts = build_model_tunit(config_n)
-        load_model_tunit(config_n, networks, opts)
-        for key in networks.keys():
-            networks[key].eval()
+        if not args.from_scratch:
+            load_model_tunit(config_n, networks, opts)
         encoder = networks['G'].cnt_encoder
 
     elif config_n.model == 'MUNIT':
         encoder = AdaINGen(config['input_dim'], config['gen'])
-        last_model_name = get_model_list(config["checkpoint_dir"], 'gen')
-        state_dict = torch.load(last_model_name)
-        e_domain = config['encoder_domain']
-        encoder.load_state_dict(state_dict[e_domain])
+        if not args.from_scratch:
+            last_model_name = get_model_list(config["checkpoint_dir"], 'gen')
+            state_dict = torch.load(last_model_name)
+            e_domain = config['encoder_domain']
+            encoder.load_state_dict(state_dict[e_domain])
         encoder = encoder.enc_content
-        encoder.eval()
+
+    elif config_n.model == 'STARGAN_V2':
+        encoder = build_encoder_stargan_v2(config_n)
 
     else:
         raise(NotImplementedError)
     
-    encoder = NoGradWrapper(encoder)
+    if args.from_scratch:
+        pass
+    else:
+        encoder = NoGradWrapper(encoder).eval()
     model = nn.Sequential(encoder, kp_regressor)
     model = model.cuda()
 
